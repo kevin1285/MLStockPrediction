@@ -13,5 +13,3 @@ polygon-api-client
 # Data science
 pandas
 numpy
-scikit-learn
-matplotlib

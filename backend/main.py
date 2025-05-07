@@ -1,10 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-from utils.sentiment import get_news_sentiment, get_news_sentiment_today
-
+from dotenv import load_dotenv
 
 app = FastAPI()
+
+load_dotenv()
+
+from utils.sentiment import get_news_data_today
+from utils.pap import get_trade_signal
+
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,7 +24,9 @@ def read_root():
 
 @app.get("/api/analysis/{ticker}")
 async def analyze_stock(ticker: str):
-    sentiment_score = get_news_sentiment_today(ticker)
+    trade_signal, sentiment, articles = get_trade_signal(ticker)
     return {
-        "sentiment": sentiment_score
+        "signal": trade_signal,
+        "sentiment_score": sentiment,
+        "articles": articles
     }

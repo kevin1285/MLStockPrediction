@@ -1,6 +1,7 @@
-def fetch_data(client, symbol, multiplier, timespan, start, end):
+from pandas import pd
+def fetch_data(client, ticker, multiplier, timespan, start, end):
     aggs = client.list_aggs(
-        ticker=symbol,
+        ticker=ticker,
         multiplier=multiplier,
         timespan=timespan,
         from_=start,
