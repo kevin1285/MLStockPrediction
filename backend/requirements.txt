@@ -1,0 +1,17 @@
+# backend webdev
+fastapi
+uvicorn[standard]
+
+# ML models
+tensorflow
+torch
+transformers
+
+# Data fetching
+polygon-api-client
+
+# Data science
+pandas
+numpy
+scikit-learn
+matplotlib

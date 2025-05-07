@@ -1,0 +1,3 @@
+@echo off
+echo Starting FastAPI server...
+uvicorn main:app --reload --host localhost --port 8000 
