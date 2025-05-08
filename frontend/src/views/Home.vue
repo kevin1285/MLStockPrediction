@@ -3,7 +3,7 @@
     <section class="hero">
       <h1>Welcome to TradeSense</h1>
       <p>Leverage the power of machine learning to make smarter trading decisions</p>
-      <button class="cta-button">Get Started</button>
+      <router-link class="cta-button" to="/analysis">Get Started</router-link>
     </section>
 
     <section class="features">
@@ -60,6 +60,7 @@
 .cta-button {
   background: white;
   color: #764ba2;
+  text-decoration: none;
   border: none;
   padding: 12px 30px;
   font-size: 1.1rem;

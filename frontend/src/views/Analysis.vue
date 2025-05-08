@@ -85,6 +85,9 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useToast } from 'vue-toastification'
+
+const toast = useToast();
 
 const ticker = ref('')
 const loading = ref(false)
@@ -111,22 +114,27 @@ const formatDate = (dateString) => {
 }
 
 const analyzeStock = async () => {
-  if (!ticker.value) return
-  
   loading.value = true
   try {
     const response = await fetch(`http://localhost:8000/api/analysis/${ticker.value}`)
-    if (!response.ok) {
-      throw new Error('Failed to fetch analysis')
+    if (response.status === 404) {
+      toast.error("Invalid ticker symbol. Please try again.");
+      console.log("404 error reachhhhheddddd");
+      //alert("404 reached");
+      return;
     }
-    const analysis = await response.json()
+    if (!response.ok) {
+      console.log("got some other error");
+      return
+    }
+    const analysis = await response.json();
     console.log(analysis);
     analysisData.value = {
       prediction: analysis.signal,
       sentiment: analysis.sentiment_score,
       riskLevel: 'Moderate',
       articles: analysis.articles
-    }
+    };
   } catch (error) {
     console.error('Error analyzing stock:', error)
   } finally {

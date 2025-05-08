@@ -223,6 +223,14 @@ PREDICTION_BATCH_SIZE = 64 # Batch size for CNN prediction
 from .sentiment import get_news_data_today
 from datetime import datetime, timezone, timedelta
 
+
+def ticker_exists(ticker: str) -> bool:
+    try:
+        client.get_ticker_details(ticker)
+        return True
+    except Exception:
+        return False
+    
 def get_trade_signal(
     ticker: str,
     lookback_bars: int = MODEL_INPUT_WINDOW,
@@ -230,7 +238,8 @@ def get_trade_signal(
     atr_period: int = ATR_PERIOD,
     equity: float = 1.0,
 ) -> str:
-
+    if not ticker_exists(ticker):
+        raise ValueError("Ticker does not exist")
     now_dt = datetime.now(timezone.utc) - timedelta(minutes=60)
 
     # 2) Fetch your minute bars (or daily) up to `at_timestamp`
