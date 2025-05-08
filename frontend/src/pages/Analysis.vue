@@ -113,21 +113,33 @@ const formatDate = (dateString) => {
   }).format(date)
 }
 
+const isMarketOpen = () => {
+  const curEST = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const day = curEST.getDay(); // 0 = Sunday, 6 = Saturday
+  const curMin = 60*curEST.getHours() + curEST.getMinutes();
+  const openMin = 60*9 + 30, closeMin = 60*16;
+  return day >= 1 && day <= 5 && curMin >= openMin && curMin <= closeMin;
+}
 const analyzeStock = async () => {
+  if (!isMarketOpen()) {
+    toast.error("Market is closed");
+    return;
+  }
   loading.value = true
   try {
-    const response = await fetch(`http://localhost:8000/api/analysis/${ticker.value}`)
-    if (response.status === 404) {
+    const res = await fetch(`http://localhost:8000/api/analysis/${ticker.value}`)
+    if (res.status === 404) {
       toast.error("Invalid ticker symbol. Please try again.");
       console.log("404 error reachhhhheddddd");
       //alert("404 reached");
       return;
     }
-    if (!response.ok) {
+    if (!res.ok) {
+      toast.error("Unexpected error occured.");
       console.log("got some other error");
       return
     }
-    const analysis = await response.json();
+    const analysis = await res.json();
     console.log(analysis);
     analysisData.value = {
       prediction: analysis.signal,
@@ -136,7 +148,11 @@ const analyzeStock = async () => {
       articles: analysis.articles
     };
   } catch (error) {
-    console.error('Error analyzing stock:', error)
+    if (error instanceof TypeError && error.message.includes("Failed to fetch")) {
+      toast.error("Unable to reach the analysis server.");
+    } else {
+      toast.error("An unexpected error occurred.");
+    }
   } finally {
     loading.value = false
   }

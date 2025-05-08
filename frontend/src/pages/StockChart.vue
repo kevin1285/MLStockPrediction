@@ -11,7 +11,7 @@
           <input 
             type="text" 
             v-model="ticker" 
-            placeholder="Enter ticker (e.g., AAPL)"
+            placeholder="Enter ticker"
             @keyup.enter="updateChart"
           >
           <button @click="updateChart" class="update-btn">Update Chart</button>

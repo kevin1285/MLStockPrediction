@@ -28,10 +28,6 @@
   </div>
 </template>
 
-<script setup>
-// Component logic here if needed
-</script>
-
 <style scoped>
 .home {
   min-height: 100vh;
