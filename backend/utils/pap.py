@@ -8,12 +8,7 @@ import numpy as np
 from tensorflow import keras
 from keras_preprocessing.image import load_img, img_to_array
 
-
-SAVE_IMAGE_BASE_DIR = 'Pattern_Images'
-
-os.makedirs(SAVE_IMAGE_BASE_DIR, exist_ok=True)
-
-PAP_MODEL_PATH = 'ml_models/PAP_EfficientNet_10k_v2.keras'
+PAP_MODEL_PATH = 'ml_models/PAP_EfficientNet_10k_v2_tuned.keras'
 
 POLYGON_API_KEY = os.getenv("POLYGON_API_KEY")
 client = RESTClient(POLYGON_API_KEY)
@@ -135,7 +130,7 @@ def precompute_pap_scores_sequential_img_batched_pred(
     # Stage 1: Generate images sequentially
     with tempfile.TemporaryDirectory() as temp_dir:
         tasks_args = [
-            (i, len(df), df, model_input_window, temp_dir)
+            (i, df, model_input_window, temp_dir)
             for i in range(lookback, len(df))
         ]
         for args in tasks_args:
@@ -197,7 +192,9 @@ def precompute_pap_scores_sequential_img_batched_pred(
         print("Stage 3: Assigning scores (1/-1/0) based on confidence threshold...")
         BULLISH_INDICES_SET = {1, 2, 5}
         BEARISH_INDICES_SET = {0, 3, 4}
-
+        
+        paps = ['BearishFlag', 'BullishFlag', 'DoubleBottom', 'DoubleTop', 'HS', 'IHS']
+        prediction_to_string = None
         for i, original_index in enumerate(indices_to_predict):
             predicted_index = all_pred_indices[i]
             confidence = all_pred_confidences[i]
@@ -206,6 +203,9 @@ def precompute_pap_scores_sequential_img_batched_pred(
                     pap_scores[original_index] = 1
                 elif predicted_index in BEARISH_INDICES_SET:
                     pap_scores[original_index] = -1
+                
+                prediction_to_string = paps[predicted_index]
+                print(prediction_to_string)
 
     df['PAP_Score'] = pap_scores
     return df
@@ -234,13 +234,13 @@ def ticker_exists(ticker: str) -> bool:
 def get_trade_signal(
     ticker: str,
     lookback_bars: int = MODEL_INPUT_WINDOW,
-    sentiment_threshold: float = SENTIMENT_THRESHOLD,
     atr_period: int = ATR_PERIOD,
-    equity: float = 1.0,
+    atr_sl_multiplier: float = 1.5,  
+    rr_ratio: float = 1.5, 
 ) -> str:
     if not ticker_exists(ticker):
         raise ValueError("Ticker does not exist")
-    now_dt = datetime.now(timezone.utc) - timedelta(minutes=60)
+    now_dt = datetime.now(timezone.utc) - timedelta(minutes=350)
 
     # 2) Fetch your minute bars (or daily) up to `at_timestamp`
     #    You only need the last `lookback_bars + 10` rows
@@ -274,22 +274,26 @@ def get_trade_signal(
         print("SANITY CHECK FAILED")
         return "hold", sent_score, articles
 
-    # Determine side & size multiplier
+    # Determine signal
     signal = None
-    #mult = 1.0
     if pap == 1:
         signal = "long"
-        #if sent_score > sentiment_threshold:
-            #mult = 1.5
     elif pap == -1:
         signal = "short"
-        #if sent_score < -sentiment_threshold:
-            #mult = 1.5
     else:
         signal = "long" if sent_score > 0 else "short"
+    
+    lows  = df["Low"].values
+    highs = df["High"].values
 
-    # Calculate position size fraction (you can ignore actual sizing if you just want a signal)
-    #alloc_pct = min(1.0, max(0.0, equity * mult))
-    # position_size = math.floor(alloc_pct * equity / price)
-
-    return signal, sent_score, articles
+    if signal == "long":
+        support = np.min(lows)
+        sl = support - atr_sl_multiplier * atr
+        risk = price - sl
+        tp = price + rr_ratio * risk
+    else:
+        resistance = np.max(highs)
+        sl = resistance + atr_sl_multiplier * atr
+        risk = sl - price
+        tp = price - rr_ratio * risk
+    return signal, sl, tp, sent_score, articles

@@ -26,9 +26,11 @@ def read_root():
 @app.get("/api/analysis/{ticker}")
 async def analyze_stock(ticker: str):
     try:
-        trade_signal, sentiment, articles = get_trade_signal(ticker)
+        trade_signal, sl, tp, sentiment, articles = get_trade_signal(ticker)
         return {
             "signal": trade_signal,
+            "stop_loss": sl,
+            "take_profit": tp,
             "sentiment_score": sentiment,
             "articles": articles
         }

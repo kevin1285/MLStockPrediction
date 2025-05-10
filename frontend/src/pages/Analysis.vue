@@ -30,16 +30,23 @@
         </div>
 
         <div class="result-card">
+          <h3>Price Targets</h3>
+          <div class="price-targets">
+            <div class="target-item">
+              <span class="target-label">Take Profit</span>
+              <span class="target-value">${{ analysisData.takeProfit.toFixed(2) }}</span>
+            </div>
+            <div class="target-item">
+              <span class="target-label">Stop Loss</span>
+              <span class="target-value">${{ analysisData.stopLoss.toFixed(2) }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="result-card">
           <h3>Market Sentiment</h3>
           <div class="sentiment-score" :class="getSentimentClass(analysisData.sentiment)">
             {{ analysisData.sentiment.toFixed(2) }}
-          </div>
-        </div>
-
-        <div class="result-card">
-          <h3>Risk Assessment</h3>
-          <div class="risk-level" :class="analysisData.riskLevel">
-            {{ analysisData.riskLevel }}
           </div>
         </div>
 
@@ -114,6 +121,7 @@ const formatDate = (dateString) => {
 }
 
 const isMarketOpen = () => {
+  return true;
   const curEST = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
   const day = curEST.getDay(); // 0 = Sunday, 6 = Saturday
   const curMin = 60*curEST.getHours() + curEST.getMinutes();
@@ -144,7 +152,8 @@ const analyzeStock = async () => {
     analysisData.value = {
       prediction: analysis.signal,
       sentiment: analysis.sentiment_score,
-      riskLevel: 'Moderate',
+      takeProfit: analysis.take_profit,
+      stopLoss: analysis.stop_loss,
       articles: analysis.articles
     };
   } catch (error) {
@@ -332,6 +341,32 @@ const analyzeStock = async () => {
 .risk-level.Moderate {
   background: #fefcbf;
   color: #975a16;
+}
+
+.price-targets {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.target-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.target-label {
+  color: #4a5568;
+  font-weight: 500;
+}
+
+.target-value {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #2d3748;
 }
 
 .news-section {

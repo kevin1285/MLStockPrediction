@@ -51,7 +51,7 @@ def fetch_news_articles(ticker, start_date, end_date, max_articles=10):
 def get_news_data(company_name, from_date, to_date, max_articles=15):
     articles = fetch_news_articles(company_name, from_date, to_date, max_articles)
     if len(articles) == 0:
-       return 0
+       return 0, []
     weighted_sum = 0
     total_weight = 0
     processed_articles = []

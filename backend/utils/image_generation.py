@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import os
 import numpy as np  
 import pandas as pd
+import shutil
 
 def make_line_plot_image(df_segment: pd.DataFrame, out_path="temp_plot.png") -> bool:
     if df_segment is None or df_segment.empty or 'Close' not in df_segment.columns or df_segment['Close'].isnull().all():
@@ -17,7 +18,8 @@ def make_line_plot_image(df_segment: pd.DataFrame, out_path="temp_plot.png") -> 
 
 
 def generate_image(args):
-    i, df_len, df_ref, window, temp_dir = args
+    i, df_ref, window, temp_dir = args
+
     image_path = None
     temp_file_path = None
     pid = os.getpid()
@@ -41,4 +43,7 @@ def generate_image(args):
             os.remove(temp_file_path)
          except OSError:
             pass
+         
+    sanity_path = os.path.join('Generated_Images', f"chart_{i}.png")
+    shutil.copy(image_path, sanity_path)
     return (i, image_path)
