@@ -3,7 +3,8 @@
     <div class="footer-content">
       <div class="footer-section">
         <h3>TradeSense</h3>
-        <p>Making investment decisions smarter with machine learning</p>
+        <p>Making investment decisions smarter</p>
+        <p>with machine learning</p>
       </div>
       
       <div class="footer-section">

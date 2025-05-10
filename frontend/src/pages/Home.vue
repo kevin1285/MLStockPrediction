@@ -2,7 +2,7 @@
   <div class="home">
     <section class="hero">
       <h1>Welcome to TradeSense</h1>
-      <p>Leverage the power of machine learning to make smarter trading decisions</p>
+      <p>Leverage the power of machine learning to make smarter day trading decisions</p>
       <router-link class="cta-button" to="/analysis">Get Started</router-link>
     </section>
 
@@ -20,9 +20,9 @@
       </div>
 
       <div class="feature-card">
-        <div class="icon">📊</div>
-        <h3>Market Sentiment</h3>
-        <p>Understand market sentiment with our comprehensive analysis tools</p>
+        <div class="icon">📰</div>
+        <h3>Latest News</h3>
+        <p>Understand market sentiment with daily financial news</p>
       </div>
     </section>
   </div>

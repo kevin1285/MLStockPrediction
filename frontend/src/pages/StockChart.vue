@@ -14,11 +14,11 @@
             placeholder="Enter ticker"
             @keyup.enter="updateChart"
           >
-          <button @click="updateChart" class="update-btn">Update Chart</button>
+          <button @click="updateChart" class="update-btn">Generate Chart</button>
         </div>
       </div>
 
-      <div class="tradingview-widget-container">
+      <div v-if="ticker" class="tradingview-widget-container">
         <div id="tradingview_chart"></div>
       </div>
     </section>
@@ -28,7 +28,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 
-const ticker = ref('AAPL') // Default ticker
+const ticker = ref('');
 
 const initTradingViewWidget = () => {
   const script = document.createElement('script')
@@ -65,10 +65,6 @@ const updateChart = () => {
     initTradingViewWidget()
   }
 }
-
-onMounted(() => {
-  initTradingViewWidget()
-})
 
 watch(ticker, () => {
   if (ticker.value) {
