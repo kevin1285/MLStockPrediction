@@ -17,7 +17,7 @@ cd backend
 # Install dependencies
 pip install -r requirements.txt
 
-# Set environment variables 
+# Create .env file in /backend and set environment variables
 
 # Run the FastAPI server
 uvicorn main:app --reload --host localhost --port 8000 
