@@ -4,3 +4,4 @@
 /frontend/.vite/
 
 __pycache__/
+*.pyc
