@@ -1,14 +1,12 @@
-# MLStockPrediction
-
 ## Tech Stack
+
 ### Frontend
-- Vue.js 3
-- Vite
+![Vue.js](https://img.shields.io/badge/Vue.js-35495E?logo=vue.js&logoColor=4FC08D&style=for-the-badge)
+![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white&style=for-the-badge)
 
 ### Backend
-- FastAPI (Python 3.10+)
-- TensorFlow / Keras (for ML inference)
-- Polygon.io API (for market data)
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?logo=fastapi&logoColor=white&style=for-the-badge)
+
 
 ## Running Locally
 ### Backend 
@@ -19,10 +17,10 @@ cd backend
 # Install dependencies
 pip install -r requirements.txt
 
-# Set environment variables (e.g. POLYGON_API_KEY)
+# Set environment variables 
 
 # Run the FastAPI server
-uvicorn main:app --reload
+uvicorn main:app --reload --host localhost --port 8000 
 ```
 
 ### Frontend
