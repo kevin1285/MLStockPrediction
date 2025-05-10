@@ -1,4 +1,4 @@
-## Tech Stack
+## TECH STACK
 
 ### Frontend
 ![Vue.js](https://img.shields.io/badge/Vue.js-35495E?logo=vue.js&logoColor=4FC08D&style=for-the-badge)
@@ -8,7 +8,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-005571?logo=fastapi&logoColor=white&style=for-the-badge)
 
 
-## Running Locally
+## RUNNING LOCALLY
 ### Backend 
 ```bash
 # Navigate to backend directory
