@@ -52,7 +52,12 @@
             </div>
             <div class="modal-actions">
               <button @click="showSettings = false" class="cancel-btn">Cancel</button>
-              <button @click="showSettings = false" class="save-btn">Save</button>
+              <button 
+                @click="settingsValid ? showSettings = false : null" 
+                class="save-btn"
+                :class="{ 'save-btn-disabled': !settingsValid }"
+                :disabled="!settingsValid"
+              >Save</button>
             </div>
           </div>
         </div>
@@ -143,6 +148,7 @@ const ticker = ref('')
 const loading = ref(false)
 const analysisData = ref(null)
 const showSettings = ref(false)
+const settingsValid = ref(true)
 
 const DEFAULT_RR_RATIO = 1.5;
 const DEFAULT_ATR_SL_MULTIPLIER = 1.5;
@@ -151,15 +157,21 @@ const rrRatio = ref(DEFAULT_RR_RATIO)
 const atrSlMultiplier = ref(DEFAULT_ATR_SL_MULTIPLIER)
 
 const validateSettings = () => {
+  settingsValid.value = true;
   if (rrRatio.value < 0.5 || rrRatio.value > 10) {
     toast.error("Risk/Reward ratio must be between 0.5 and 10.");
     rrRatio.value = DEFAULT_RR_RATIO;
+    settingsValid.value = false;
+    return false;
   }
 
   if (atrSlMultiplier.value < 1 || atrSlMultiplier.value > 5) {
     toast.error("Stop-loss multiplier must be between 1.0 and 5.0.");
     atrSlMultiplier.value = DEFAULT_ATR_SL_MULTIPLIER;
+    settingsValid.value = false;
+    return false;
   }
+  return true;
 }
 
 const roundDecimal = (num, decimalPlaces) => {
@@ -672,6 +684,16 @@ const analyzeStock = async () => {
 
 .save-btn:hover {
   transform: translateY(-1px);
+}
+
+.save-btn-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.save-btn-disabled:hover {
+  transform: none !important;
 }
 
 @media (max-width: 768px) {
