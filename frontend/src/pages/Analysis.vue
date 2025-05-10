@@ -8,6 +8,9 @@
     <section class="analysis-content">
       <div class="search-section">
         <div class="search-box">
+          <button @click="showSettings = true" class="settings-btn">
+            <span class="settings-icon">⚙️</span>
+          </button>
           <input 
             type="text" 
             v-model="ticker" 
@@ -15,6 +18,43 @@
             @keyup.enter="analyzeStock"
           >
           <button @click="analyzeStock" class="analyze-btn">Analyze</button>
+        </div>
+      </div>
+
+      <!-- Settings Modal -->
+      <div v-if="showSettings" class="modal-overlay">
+        <div class="modal-content" @click.stop>
+          <h2>Risk Settings</h2>
+          <div class="settings-form">
+            <div class="setting-item">
+              <label>Risk/Reward Ratio</label>
+              <input 
+                type="number" 
+                v-model="rrRatio" 
+                min="0.5" 
+                max="10" 
+                step="0.1"
+                @change="validateSettings"
+              >
+              <p class="setting-description">How much reward per unit of risk (default: {{ DEFAULT_RR_RATIO }})</p>
+            </div>
+            <div class="setting-item">
+              <label>ATR Stop Loss Multiplier</label>
+              <input 
+                type="number" 
+                v-model="atrSlMultiplier" 
+                min="1" 
+                max="5" 
+                step="0.1"
+                @change="validateSettings"
+              >
+              <p class="setting-description">How many ATR units to use for stop loss (default: {{ DEFAULT_ATR_SL_MULTIPLIER }})</p>
+            </div>
+            <div class="modal-actions">
+              <button @click="showSettings = false" class="cancel-btn">Cancel</button>
+              <button @click="showSettings = false" class="save-btn">Save</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -34,11 +74,11 @@
           <div class="price-targets">
             <div class="target-item">
               <span class="target-label">Take Profit</span>
-              <span class="target-value">${{ analysisData.takeProfit.toFixed(2) }}</span>
+              <span class="target-value">${{ roundDecimal(analysisData.takeProfit, 2) }}</span>
             </div>
             <div class="target-item">
               <span class="target-label">Stop Loss</span>
-              <span class="target-value">${{ analysisData.stopLoss.toFixed(2) }}</span>
+              <span class="target-value">${{ roundDecimal(analysisData.stopLoss, 2) }}</span>
             </div>
           </div>
         </div>
@@ -46,14 +86,19 @@
         <div class="result-card">
           <h3>Market Sentiment</h3>
           <div class="sentiment-score" :class="getSentimentClass(analysisData.sentiment)">
-            {{ analysisData.sentiment.toFixed(2) }}
+            {{ roundDecimal(analysisData.sentiment, 2) }}
           </div>
         </div>
 
         <div class="news-section">
           <h3>Latest News</h3>
           <div class="news-grid">
-            <div v-for="article in analysisData.articles" :key="article.url" class="news-card">
+            <a v-for="article in analysisData.articles" 
+               :key="article.url" 
+               :href="article.url" 
+               target="_blank" 
+               rel="noopener" 
+               class="news-card">
               <div class="news-image" v-if="article.image_url">
                 <img :src="article.image_url" :alt="article.title">
               </div>
@@ -63,9 +108,7 @@
                   <span class="publisher-name">{{ article.publisher.name }}</span>
                   <span class="publish-date">{{ formatDate(article.published_utc) }}</span>
                 </div>
-                <h4 class="news-title">
-                  <a :href="article.url" target="_blank" rel="noopener">{{ article.title }}</a>
-                </h4>
+                <h4 class="news-title">{{ article.title }}</h4>
                 <p class="news-description" v-if="article.description">{{ article.description }}</p>
                 <div class="news-footer">
                   <div class="news-meta">
@@ -78,11 +121,11 @@
                     </div>
                   </div>
                   <div class="sentiment-indicator" :class="getSentimentClass(article.sentiment_score)">
-                    {{ article.sentiment_score.toFixed(2) }}
+                    {{ roundDecimal(article.sentiment_score, 2) }}
                   </div>
                 </div>
               </div>
-            </div>
+            </a>
           </div>
         </div>
       </div>
@@ -99,6 +142,30 @@ const toast = useToast();
 const ticker = ref('')
 const loading = ref(false)
 const analysisData = ref(null)
+const showSettings = ref(false)
+
+const DEFAULT_RR_RATIO = 1.5;
+const DEFAULT_ATR_SL_MULTIPLIER = 1.5;
+
+const rrRatio = ref(DEFAULT_RR_RATIO)
+const atrSlMultiplier = ref(DEFAULT_ATR_SL_MULTIPLIER)
+
+const validateSettings = () => {
+  if (rrRatio.value < 0.5 || rrRatio.value > 10) {
+    toast.error("Risk/Reward ratio must be between 0.5 and 10.");
+    rrRatio.value = DEFAULT_RR_RATIO;
+  }
+
+  if (atrSlMultiplier.value < 1 || atrSlMultiplier.value > 5) {
+    toast.error("Stop-loss multiplier must be between 1.0 and 5.0.");
+    atrSlMultiplier.value = DEFAULT_ATR_SL_MULTIPLIER;
+  }
+}
+
+const roundDecimal = (num, decimalPlaces) => {
+  const roundedStr = num.toFixed(decimalPlaces)
+  return Number(roundedStr) === 0 ? (0).toFixed(decimalPlaces) : roundedStr;
+}
 
 const getSentimentClass = (sentiment) => {
   if (sentiment > 0.6) return 'very-positive'
@@ -135,20 +202,16 @@ const analyzeStock = async () => {
   }
   loading.value = true
   try {
-    const res = await fetch(`http://localhost:8000/api/analysis/${ticker.value}`)
+    const res = await fetch(`http://localhost:8000/api/analysis/${ticker.value}?rr_ratio=${rrRatio.value}&atr_sl_multiplier=${atrSlMultiplier.value}`)
     if (res.status === 404) {
       toast.error("Invalid ticker symbol. Please try again.");
-      console.log("404 error reachhhhheddddd");
-      //alert("404 reached");
       return;
     }
     if (!res.ok) {
-      toast.error("Unexpected error occured.");
-      console.log("got some other error");
+      toast.error("Unexpected error occurred.");
       return
     }
     const analysis = await res.json();
-    console.log(analysis);
     analysisData.value = {
       prediction: analysis.signal,
       sentiment: analysis.sentiment_score,
@@ -394,6 +457,10 @@ const analyzeStock = async () => {
   border-radius: 8px;
   overflow: hidden;
   transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  text-decoration: none;
+  display: block;
+  color: inherit;
 }
 
 .news-card:hover {
@@ -445,14 +512,10 @@ const analyzeStock = async () => {
   margin: 0 0 0.75rem;
   font-size: 1.25rem;
   line-height: 1.4;
-}
-
-.news-title a {
   color: #2d3748;
-  text-decoration: none;
 }
 
-.news-title a:hover {
+.news-title:hover {
   color: #4a5568;
 }
 
@@ -504,6 +567,113 @@ const analyzeStock = async () => {
   font-weight: 500;
 }
 
+.settings-btn {
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.settings-btn:hover {
+  background: #e2e8f0;
+}
+
+.settings-icon {
+  font-size: 1.2rem;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 500px;
+}
+
+.modal-content h2 {
+  color: #2d3748;
+  margin-bottom: 1.5rem;
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.setting-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.setting-item label {
+  font-weight: 500;
+  color: #4a5568;
+}
+
+.setting-item input {
+  padding: 0.5rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+.setting-description {
+  font-size: 0.875rem;
+  color: #718096;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.cancel-btn, .save-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-btn {
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  color: #4a5568;
+}
+
+.save-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+}
+
+.cancel-btn:hover {
+  background: #e2e8f0;
+}
+
+.save-btn:hover {
+  transform: translateY(-1px);
+}
+
 @media (max-width: 768px) {
   .analysis {
     padding: 1rem;
@@ -514,11 +684,17 @@ const analyzeStock = async () => {
   }
 
   .search-box {
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
   }
 
-  .analyze-btn {
-    width: 100%;
+  .search-box input {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .analyze-btn, .settings-btn {
+    flex: 0 0 auto;
   }
 
   .news-grid {
