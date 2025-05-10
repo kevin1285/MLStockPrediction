@@ -1,6 +1,5 @@
 from polygon import RESTClient
 
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 from torch.nn.functional import softmax
 
@@ -16,16 +15,19 @@ client = RESTClient(POLYGON_API_KEY)
 _model = None
 _tokenizer = None
 
-def get_model_and_tokenizer():
+def get_sentiment_model():
     global _model, _tokenizer
     if _model is None or _tokenizer is None:
-        print("Loading FinBERT model and tokenizer...")
+        print("------ IMPORTING TRANSFORMERS ------")
+        from transformers import AutoTokenizer, AutoModelForSequenceClassification
+        print("------ LOADING SENTIMENT MODEL ------")
         _tokenizer = AutoTokenizer.from_pretrained("yiyanghkust/finbert-tone")
         _model = AutoModelForSequenceClassification.from_pretrained("yiyanghkust/finbert-tone")
+        print("------ SENTIMENT MODEL LOAD DONE ------")
     return _model, _tokenizer
 
 def predict_sentiment(text):
-    model, tokenizer = get_model_and_tokenizer()
+    model, tokenizer = get_sentiment_model()
     inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=128)
     with torch.no_grad():
         outputs = model(**inputs)

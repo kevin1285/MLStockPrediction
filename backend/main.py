@@ -1,14 +1,21 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
 from fastapi import HTTPException
+from contextlib import asynccontextmanager
 
-app = FastAPI()
-
+from dotenv import load_dotenv
 load_dotenv()
 
-from utils.sentiment import get_news_data_today
-from utils.pap import get_trade_signal
+from utils.pap import get_pap_model, get_trade_signal
+from utils.sentiment import get_sentiment_model
+
+@asynccontextmanager
+async def lifespan(app):
+    get_pap_model()
+    get_sentiment_model()
+    yield
+
+app = FastAPI(lifespan=lifespan)
 
 
 app.add_middleware(
@@ -24,9 +31,17 @@ def read_root():
     return {"message": "Hello, FastAPI!"}
 
 @app.get("/api/analysis/{ticker}")
-async def analyze_stock(ticker: str):
+async def analyze_stock(
+    ticker: str,
+    rr_ratio: float = 1.5,
+    atr_sl_multiplier: float = 1.5
+):
     try:
-        trade_signal, sl, tp, sentiment, articles = get_trade_signal(ticker)
+        trade_signal, sl, tp, sentiment, articles = get_trade_signal(
+            ticker,
+            rr_ratio=rr_ratio,
+            atr_sl_multiplier=atr_sl_multiplier
+        )
         return {
             "signal": trade_signal,
             "stop_loss": sl,

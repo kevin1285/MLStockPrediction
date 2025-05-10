@@ -5,23 +5,24 @@ from polygon import RESTClient
 import pandas as pd
 import numpy as np 
 
-from tensorflow import keras
 from keras_preprocessing.image import load_img, img_to_array
-
-PAP_MODEL_PATH = 'ml_models/PAP_EfficientNet_10k_v2_tuned.keras'
 
 POLYGON_API_KEY = os.getenv("POLYGON_API_KEY")
 client = RESTClient(POLYGON_API_KEY)
+
+PAP_MODEL_PATH = 'ml_models/PAP_EfficientNet_10k_v2_tuned.keras'
 
 _pap_model = None
 def get_pap_model():
     global _pap_model
     if _pap_model is None:
-        _pap_model = keras.models.load_model(PAP_MODEL_PATH)
+        print("------- IMPORTING TF ---------")
+        from tensorflow import keras
+        print("------- LOADING PAP MODEL ---------")
+        _pap_model = keras.models.load_model(PAP_MODEL_PATH, compile=False)
+        print("------- PAP MODEL LOAD DONE -------")
     return _pap_model
 
-
-# ATR Calculation
 def calculate_atr(data: pd.DataFrame, period: int) -> pd.Series:
     required_cols = ['High', 'Low', 'Close']
     if not all(col in data.columns for col in required_cols):
@@ -45,7 +46,6 @@ def calculate_atr(data: pd.DataFrame, period: int) -> pd.Series:
     return atr.rename(f"ATR_{period}")
 
 
-# Max Drawdown Calculation
 def calculate_max_drawdown(equity_series: pd.Series) -> float: #calculates max drop (captures risk)
     if equity_series is None or equity_series.empty:
         return np.nan
@@ -55,9 +55,15 @@ def calculate_max_drawdown(equity_series: pd.Series) -> float: #calculates max d
     return max_drawdown
 
 
-# Data Fetching and Processing Function (Fixed FutureWarning)
 def get_processed_data(ticker: str, interval: str, start_dt: str, end_dt: str, atr_period: int = 14) -> pd.DataFrame | None:
-    print(f"\n--- Processing {ticker} for Interval: {interval} from {start_dt} to {end_dt} using Polygon.io ---")
+    def convert_to_et(dt_str: str) -> str: # only used for print()
+        dt = pd.to_datetime(dt_str)
+        if dt.tz is None:
+            dt = dt.tz_localize('UTC')
+        et = dt.tz_convert('America/New_York')
+        return et.strftime('%Y-%m-%d %H:%M:%S ET')
+
+    print(f"\n--- Processing {ticker} for Interval: {interval} from {convert_to_et(start_dt)} to {convert_to_et(end_dt)} using Polygon.io ---")
     interval_map_poly = {'1m': (1, 'minute'), '5m': (5, 'minute'), '15m': (15, 'minute'), '30m': (30, 'minute'), '60m': (1, 'hour')}
     interval_map_pd = {'1m': '1min', '5m': '5min', '15m': '15min', '30m': '30min', '60m': 'H'}
 
@@ -67,7 +73,7 @@ def get_processed_data(ticker: str, interval: str, start_dt: str, end_dt: str, a
 
     multiplier, timespan = interval_map_poly[interval]
     pd_freq = interval_map_pd[interval]
-    print(f"Requesting Polygon.io: Symbol={ticker}, Multiplier={multiplier}, Timespan={timespan}, Start={start_dt}, End={end_dt}")
+    print(f"Requesting Polygon.io: Symbol={ticker}, Multiplier={multiplier}, Timespan={timespan}, Start={convert_to_et(start_dt)}, End={convert_to_et(end_dt)}")
     all_aggs_data = []
 
     aggs_iterator = client.list_aggs(ticker=ticker, multiplier=multiplier, timespan=timespan, from_=start_dt, to=end_dt, adjusted=True, limit=50000)
@@ -127,7 +133,7 @@ def precompute_pap_scores_sequential_img_batched_pred(
     image_paths_dict = {}
     lookback = model_input_window - 1
 
-    # Stage 1: Generate images sequentially
+    # Generate image
     with tempfile.TemporaryDirectory() as temp_dir:
         tasks_args = [
             (i, df, model_input_window, temp_dir)
@@ -144,7 +150,7 @@ def precompute_pap_scores_sequential_img_batched_pred(
             df['PAP_Score'] = pap_scores
             return df
 
-        # Stage 2: Batch Keras prediction
+        # Keras prediction
         indices_to_predict = sorted(image_paths_dict.keys())
         ordered_image_paths = [image_paths_dict[i] for i in indices_to_predict]
         num_images = len(ordered_image_paths)
@@ -188,7 +194,7 @@ def precompute_pap_scores_sequential_img_batched_pred(
         except Exception as e:
             print(f"ERROR during Keras batch prediction: {e}")
 
-        # Stage 3: Assign scores based on confidence threshold
+        # Assign scores based on confidence threshold
         print("Stage 3: Assigning scores (1/-1/0) based on confidence threshold...")
         BULLISH_INDICES_SET = {1, 2, 5}
         BEARISH_INDICES_SET = {0, 3, 4}
@@ -240,10 +246,8 @@ def get_trade_signal(
 ) -> str:
     if not ticker_exists(ticker):
         raise ValueError("Ticker does not exist")
-    now_dt = datetime.now(timezone.utc) - timedelta(minutes=350)
+    now_dt = datetime.now(timezone.utc) - timedelta(days=1)
 
-    # 2) Fetch your minute bars (or daily) up to `at_timestamp`
-    #    You only need the last `lookback_bars + 10` rows
     extra = atr_period + 10   
     df = get_processed_data(
         ticker,
@@ -254,7 +258,7 @@ def get_trade_signal(
     )
     df = df.iloc[-(lookback_bars):]   # drop older rows
 
-    # 3) Compute PAP_Score for that window
+    # Compute PAP_Score for that window
     df = precompute_pap_scores_sequential_img_batched_pred(
         df=df,
         model_input_window=lookback_bars,
