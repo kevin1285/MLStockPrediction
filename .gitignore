@@ -3,3 +3,4 @@
 /frontend/dist/
 /frontend/.vite/
 
+__pycache__/
