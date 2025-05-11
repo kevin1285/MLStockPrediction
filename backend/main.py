@@ -37,7 +37,7 @@ async def analyze_stock(
     atr_sl_multiplier: float = 1.5
 ):
     try:
-        trade_signal, sl, tp, sentiment, articles = get_trade_signal(
+        trade_signal, sl, tp, sentiment, articles, pap_pattern = get_trade_signal(
             ticker,
             rr_ratio=rr_ratio,
             atr_sl_multiplier=atr_sl_multiplier
@@ -47,7 +47,8 @@ async def analyze_stock(
             "stop_loss": sl,
             "take_profit": tp,
             "sentiment_score": sentiment,
-            "articles": articles
+            "articles": articles,
+            "pap_pattern": pap_pattern
         }
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

@@ -82,6 +82,7 @@ def get_processed_data(ticker: str, interval: str, start_dt: str, end_dt: str, a
 
     raw_df = pd.DataFrame(all_aggs_data)
 
+    print(raw_df.columns.tolist())
     # Processing
     raw_df['timestamp'] = pd.to_datetime(raw_df['timestamp'], unit='ms', utc=True)
     raw_df.set_index('timestamp', inplace=True)
@@ -209,12 +210,11 @@ def precompute_pap_scores_sequential_img_batched_pred(
                     pap_scores[original_index] = 1
                 elif predicted_index in BEARISH_INDICES_SET:
                     pap_scores[original_index] = -1
-                
                 prediction_to_string = paps[predicted_index]
                 print(prediction_to_string)
 
     df['PAP_Score'] = pap_scores
-    return df
+    return df, prediction_to_string
 
 ATR_PERIOD = 14
 MODEL_INPUT_WINDOW = 30 # Number of bars for the input image
@@ -246,7 +246,8 @@ def get_trade_signal(
 ) -> str:
     if not ticker_exists(ticker):
         raise ValueError("Ticker does not exist")
-    now_dt = datetime.now(timezone.utc) - timedelta(days=1)
+    # this time delta will be set to 0 in deployment- rn it is constantly changed so we can run predictions when the market is closed
+    now_dt = datetime.now(timezone.utc) - timedelta(hours=48) 
 
     extra = atr_period + 10   
     df = get_processed_data(
@@ -259,7 +260,7 @@ def get_trade_signal(
     df = df.iloc[-(lookback_bars):]   # drop older rows
 
     # Compute PAP_Score for that window
-    df = precompute_pap_scores_sequential_img_batched_pred(
+    df, pap_pattern = precompute_pap_scores_sequential_img_batched_pred(
         df=df,
         model_input_window=lookback_bars,
         batch_size=PREDICTION_BATCH_SIZE
@@ -276,7 +277,7 @@ def get_trade_signal(
     # Sanity checks
     if any(np.isnan(x) or x <= 0 for x in (atr, price)):
         print("SANITY CHECK FAILED")
-        return "hold", sent_score, articles
+        return "hold", sent_score, articles, pap_pattern
 
     # Determine signal
     signal = None
@@ -300,4 +301,4 @@ def get_trade_signal(
         sl = resistance + atr_sl_multiplier * atr
         risk = sl - price
         tp = price - rr_ratio * risk
-    return signal, sl, tp, sent_score, articles
+    return signal, sl, tp, sent_score, articles, pap_pattern

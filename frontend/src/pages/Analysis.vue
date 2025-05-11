@@ -72,6 +72,7 @@
         <div class="result-card">
           <h3>Prediction</h3>
           <div class="prediction-value">{{ analysisData.prediction }}</div>
+          <div v-if="analysisData.papPattern" class="pap-pattern">Pattern: {{ analysisData.papPattern }}</div>
         </div>
 
         <div class="result-card">
@@ -90,9 +91,7 @@
         
         <div class="result-card">
           <h3>Market Sentiment</h3>
-          <div class="sentiment-score" :class="getSentimentClass(analysisData.sentiment)">
-            {{ roundDecimal(analysisData.sentiment, 2) }}
-          </div>
+          <SentimentDisplay :sentiment="analysisData.sentiment" />
         </div>
 
         <div class="news-section">
@@ -125,9 +124,7 @@
                       </span>
                     </div>
                   </div>
-                  <div class="sentiment-indicator" :class="getSentimentClass(article.sentiment_score)">
-                    {{ roundDecimal(article.sentiment_score, 2) }}
-                  </div>
+                  <span>{{ roundDecimal(article.sentiment_score, 2) }}</span>
                 </div>
               </div>
             </a>
@@ -141,6 +138,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useToast } from 'vue-toastification'
+import SentimentDisplay from '../components/SentimentDisplay.vue'
 
 const toast = useToast();
 
@@ -177,16 +175,6 @@ const validateSettings = () => {
 const roundDecimal = (num, decimalPlaces) => {
   const roundedStr = num.toFixed(decimalPlaces)
   return Number(roundedStr) === 0 ? (0).toFixed(decimalPlaces) : roundedStr;
-}
-
-const getSentimentClass = (sentiment) => {
-  if (sentiment > 0.6) return 'very-positive'
-  if (sentiment > 0.2) return 'positive'
-  if (sentiment > 0.05) return 'slightly-positive'
-  if (sentiment >= -0.05) return 'neutral'
-  if (sentiment > -0.2) return 'slightly-negative'
-  if (sentiment > -0.6) return 'negative'
-  return 'very-negative'
 }
 
 const formatDate = (dateString) => {
@@ -229,7 +217,8 @@ const analyzeStock = async () => {
       sentiment: analysis.sentiment_score,
       takeProfit: analysis.take_profit,
       stopLoss: analysis.stop_loss,
-      articles: analysis.articles
+      articles: analysis.articles,
+      papPattern: analysis.pap_pattern
     };
   } catch (error) {
     if (error instanceof TypeError && error.message.includes("Failed to fetch")) {
@@ -362,60 +351,11 @@ const analyzeStock = async () => {
   text-transform: capitalize;
 }
 
-.sentiment-score {
-  font-size: 2rem;
-  font-weight: bold;
-  padding: 1rem;
-  border-radius: 8px;
-  text-align: center;
-  transition: all 0.3s ease;
-}
-
-.sentiment-score.very-positive {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.sentiment-score.positive {
-  background: #bbf7d0;
-  color: #166534;
-}
-
-.sentiment-score.slightly-positive {
-  background: #f0fdf4;
-  color: #166534;
-}
-
-.sentiment-score.neutral {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.sentiment-score.slightly-negative {
-  background: #fef2f2;
-  color: #991b1b;
-}
-
-.sentiment-score.negative {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.sentiment-score.very-negative {
-  background: #fecaca;
-  color: #991b1b;
-}
-
 .risk-level {
   display: inline-block;
   padding: 0.5rem 1rem;
   border-radius: 20px;
   font-weight: 500;
-}
-
-.risk-level.Moderate {
-  background: #fefcbf;
-  color: #975a16;
 }
 
 .price-targets {
@@ -694,6 +634,13 @@ const analyzeStock = async () => {
 
 .save-btn-disabled:hover {
   transform: none !important;
+}
+
+.pap-pattern {
+  margin-top: 2rem;
+  font-size: 1.2rem;
+  color: #764ba2;
+  font-weight: 500;
 }
 
 @media (max-width: 768px) {
