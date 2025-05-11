@@ -7,6 +7,10 @@
 ### Backend
 ![FastAPI](https://img.shields.io/badge/FastAPI-005571?logo=fastapi&logoColor=white&style=for-the-badge)
 
+### Machine Learning  
+![TensorFlow](https://img.shields.io/badge/TensorFlow-FF6F00?logo=tensorflow&logoColor=white&style=for-the-badge)
+![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?logo=pytorch&logoColor=white&style=for-the-badge)
+![HuggingFace](https://img.shields.io/badge/HuggingFace-FFD21F?logo=huggingface&logoColor=black&style=for-the-badge)
 
 ## Running Locally
 ### Backend 
