@@ -16,7 +16,7 @@
       
       <div class="footer-section">
         <h4>Contact</h4>
-        <p>Email: info@mltrading.com</p>
+        <p>Email: info@tradesense.com</p>
         <p>Phone: (555) 123-4567</p>
       </div>
     </div>
