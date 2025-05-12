@@ -1,15 +1,15 @@
 # backend webdev
-fastapi
-uvicorn[standard]
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
 
 # ML models
-tensorflow
-torch
-transformers
+tensorflow==2.18.0
+torch==2.7.0
+transformers==4.50.0
 
 # Data fetching
-polygon-api-client
+polygon-api-client==1.14.4
 
 # Data science
-pandas
-numpy
+pandas==2.2.3
+numpy==2.0.2
