@@ -247,7 +247,7 @@ def get_trade_signal(
     if not ticker_exists(ticker):
         raise ValueError("Ticker does not exist")
     # this time delta will be set to 0 in deployment- rn it is constantly changed so we can run predictions when the market is closed
-    now_dt = datetime.now(timezone.utc) - timedelta(hours=48) 
+    now_dt = datetime.now(timezone.utc) - timedelta(hours=60) 
 
     extra = atr_period + 10   
     df = get_processed_data(

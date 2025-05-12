@@ -2,7 +2,6 @@
 /frontend/dist/
 /frontend/.vite/
 
-/backend/Generated_Images/
 /backend/.env
 
 *.py[co]                 
