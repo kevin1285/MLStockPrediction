@@ -10,7 +10,7 @@ from keras_preprocessing.image import load_img, img_to_array
 POLYGON_API_KEY = os.getenv("POLYGON_API_KEY")
 client = RESTClient(POLYGON_API_KEY)
 
-PAP_MODEL_PATH = 'ml_models/PAP_EfficientNet_10k_v2_tuned.keras'
+PAP_MODEL_PATH = 'ml_models/MulticlassPAP_20k_v2.keras'
 
 _pap_model = None
 def get_pap_model():
@@ -120,7 +120,7 @@ def get_processed_data(ticker: str, interval: str, start_dt: str, end_dt: str, a
 import tempfile
 from utils.image_generation import generate_image
 
-PAP_CONFIDENCE_THRESHOLD = 0.9
+PAP_CONFIDENCE_THRESHOLD = 0.5
 def precompute_pap_scores_sequential_img_batched_pred(
     df: pd.DataFrame,
     model_input_window: int,
@@ -200,7 +200,7 @@ def precompute_pap_scores_sequential_img_batched_pred(
         BULLISH_INDICES_SET = {1, 2, 5}
         BEARISH_INDICES_SET = {0, 3, 4}
         
-        paps = ['BearishFlag', 'BullishFlag', 'DoubleBottom', 'DoubleTop', 'HS', 'IHS']
+        paps = ['BearishFlag', 'BullishFlag', 'DoubleBottom', 'DoubleTop', 'HS', 'IHS', 'Noise']
         prediction_to_string = None
         for i, original_index in enumerate(indices_to_predict):
             predicted_index = all_pred_indices[i]
@@ -247,7 +247,7 @@ def get_trade_signal(
     if not ticker_exists(ticker):
         raise ValueError("Ticker does not exist")
     # this time delta will be set to 0 in deployment- rn it is constantly changed so we can run predictions when the market is closed
-    now_dt = datetime.now(timezone.utc) - timedelta(hours=60) 
+    now_dt = datetime.now(timezone.utc) - timedelta(hours=19) 
 
     extra = atr_period + 10   
     df = get_processed_data(
@@ -286,6 +286,8 @@ def get_trade_signal(
     elif pap == -1:
         signal = "short"
     else:
+        if sent_score == 0:
+            return "no action", price, price, sent_score, articles, pap_pattern
         signal = "long" if sent_score > 0 else "short"
     
     lows  = df["Low"].values
