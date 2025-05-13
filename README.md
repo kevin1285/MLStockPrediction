@@ -13,6 +13,13 @@
 ![HuggingFace](https://img.shields.io/badge/HuggingFace-FFD21F?logo=huggingface&logoColor=black&style=for-the-badge)
 
 ## Running Locally
+
+### System Dependencies
+- Python ≥ 3.10 and ≤ 3.11
+- pip ≥ 22.x
+- Node.js ≥ 18.x
+- npm ≥ 9.x
+
 ### Backend 
 ```bash
 # Navigate to backend directory
