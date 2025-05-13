@@ -42,6 +42,24 @@ async def analyze_stock(
             rr_ratio=rr_ratio,
             atr_sl_multiplier=atr_sl_multiplier
         )
+
+        if trade_signal == "no action":
+            trade_signal, sl, tp, sentiment, articles, pap_pattern = get_trade_signal(
+            ticker,
+            lookback_bars=60,
+            interval_minutes=1,
+            rr_ratio=rr_ratio,
+            atr_sl_multiplier=atr_sl_multiplier
+        )
+            
+        if trade_signal == "no action":
+            trade_signal, sl, tp, sentiment, articles, pap_pattern = get_trade_signal(
+            ticker,
+            lookback_bars=60,
+            interval_minutes=5,
+            rr_ratio=rr_ratio,
+            atr_sl_multiplier=atr_sl_multiplier
+        )
         return {
             "signal": trade_signal,
             "stop_loss": sl,

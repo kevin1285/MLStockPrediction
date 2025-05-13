@@ -216,14 +216,8 @@ def precompute_pap_scores_sequential_img_batched_pred(
     df['PAP_Score'] = pap_scores
     return df, prediction_to_string
 
+
 ATR_PERIOD = 14
-MODEL_INPUT_WINDOW = 30 # Number of bars for the input image
-PAP_LOOKBACK = MODEL_INPUT_WINDOW - 1
-SENTIMENT_THRESHOLD = 0.
-
-INTERVAL_MULTIPLIER = 1
-INTERVAL_TIMESPAN = 'minute'
-
 PREDICTION_BATCH_SIZE = 64 # Batch size for CNN prediction
 
 from .sentiment import get_news_data_today
@@ -236,26 +230,24 @@ def ticker_exists(ticker: str) -> bool:
         return True
     except Exception:
         return False
-    
-def get_trade_signal(
+
+def get_pap_signal(
     ticker: str,
-    lookback_bars: int = MODEL_INPUT_WINDOW,
-    atr_period: int = ATR_PERIOD,
+    lookback_bars: int = 30,
+    interval_minutes: int = 60,
     atr_sl_multiplier: float = 1.5,  
     rr_ratio: float = 1.5, 
-) -> str:
-    if not ticker_exists(ticker):
-        raise ValueError("Ticker does not exist")
+):
     # this time delta will be set to 0 in deployment- rn it is constantly changed so we can run predictions when the market is closed
-    now_dt = datetime.now(timezone.utc) - timedelta(hours=19) 
+    now_dt = datetime.now(timezone.utc) - timedelta(hours=8) 
 
-    extra = atr_period + 10   
+    extra = ATR_PERIOD + 10   
     df = get_processed_data(
         ticker,
-        interval=f"{INTERVAL_MULTIPLIER}{INTERVAL_TIMESPAN[0]}",
-        start_dt=now_dt - pd.Timedelta(minutes=INTERVAL_MULTIPLIER*(lookback_bars+extra)),
+        interval=f"{interval_minutes}m",
+        start_dt=now_dt - pd.Timedelta(minutes=interval_minutes*(lookback_bars+extra)),
         end_dt=now_dt,
-        atr_period=atr_period
+        atr_period=ATR_PERIOD
     )
     df = df.iloc[-(lookback_bars):]   # drop older rows
 
@@ -266,30 +258,44 @@ def get_trade_signal(
         batch_size=PREDICTION_BATCH_SIZE
     )
 
-    # Compute today's sentiment (this returns a float)
+    pap_signal = int(df["PAP_Score"].iloc[-1])
+
+    if pap_signal == 0:
+        return 0, None, df
+    return pap_signal, pap_pattern, df
+
+def get_trade_signal(
+    ticker: str,
+    atr_sl_multiplier: float = 1.5,  
+    rr_ratio: float = 1.5, 
+):
+    if not ticker_exists(ticker):
+        raise ValueError("Ticker does not exist")
+
+    pap_signal, pap_pattern, df = get_pap_signal(
+        ticker,
+        lookback_bars=30,
+        interval_minutes=1,
+        rr_ratio=rr_ratio,
+        atr_sl_multiplier=atr_sl_multiplier
+    )
+
     sent_score, articles = get_news_data_today(ticker)
-
-    # Compute ATR, PAP, Price
-    atr = df["ATR_14"].iloc[-1]
-    pap = int(df["PAP_Score"].iloc[-1])
-    price = df["Close"].iloc[-1]
-
-    # Sanity checks
-    if any(np.isnan(x) or x <= 0 for x in (atr, price)):
-        print("SANITY CHECK FAILED")
-        return "hold", sent_score, articles, pap_pattern
 
     # Determine signal
     signal = None
-    if pap == 1:
+    if pap_signal == 1:
         signal = "long"
-    elif pap == -1:
+    elif pap_signal == -1:
         signal = "short"
     else:
         if sent_score == 0:
             return "no action", price, price, sent_score, articles, pap_pattern
         signal = "long" if sent_score > 0 else "short"
     
+    atr = df["ATR_14"].iloc[-1]
+    price = df["Close"].iloc[-1]
+
     lows  = df["Low"].values
     highs = df["High"].values
 
