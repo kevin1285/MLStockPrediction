@@ -111,7 +111,7 @@ def get_processed_data(ticker: str, interval: str, start_dt: str, end_dt: str, a
     processed_data.dropna(subset=[atr_col_name], inplace=True)
     rows_after_atr_na=len(processed_data)
 
-    final_expected_cols=cols_to_keep+[atr_col_name];
+    final_expected_cols=cols_to_keep+[atr_col_name]
     if not all(col in processed_data.columns for col in final_expected_cols):
         raise ValueError(f"Final columns missing: {processed_data.columns.tolist()}")
     return processed_data
@@ -200,7 +200,7 @@ def precompute_pap_scores_sequential_img_batched_pred(
         BULLISH_INDICES_SET = {1, 2, 5}
         BEARISH_INDICES_SET = {0, 3, 4}
         
-        paps = ['BearishFlag', 'BullishFlag', 'DoubleBottom', 'DoubleTop', 'HS', 'IHS', 'Noise']
+        paps = ['BearishFlag', 'BullishFlag', 'DoubleBottom', 'DoubleTop', 'Head & Shoulders', 'Inverted Head & Shoulders', 'Noise']
         prediction_to_string = None
         for i, original_index in enumerate(indices_to_predict):
             predicted_index = all_pred_indices[i]
@@ -262,7 +262,7 @@ def get_pap_signal(
         return 0, "N/A", df
     return pap_signal, pap_pattern, df
 
-interval_settings = [(1, 30), (1, 15), (5, 15), (5, 30)]
+interval_settings = [(1, 30), (1, 15), (1, 60), (5, 15), (5, 30), (15, 15)]
 def get_trade_signal(
     ticker: str,
     atr_sl_multiplier: float = 1.5,  
