@@ -149,7 +149,7 @@ def precompute_pap_scores_sequential_img_batched_pred(
         if not image_paths_dict:
             print("Warning: No images generated. Skipping prediction.")
             df['PAP_Score'] = pap_scores
-            return df
+            return df, None
 
         # Keras prediction
         indices_to_predict = sorted(image_paths_dict.keys())
@@ -233,10 +233,8 @@ def ticker_exists(ticker: str) -> bool:
 
 def get_pap_signal(
     ticker: str,
+    interval_minutes: int = 1,
     lookback_bars: int = 30,
-    interval_minutes: int = 60,
-    atr_sl_multiplier: float = 1.5,  
-    rr_ratio: float = 1.5, 
 ):
     # this time delta will be set to 0 in deployment- rn it is constantly changed so we can run predictions when the market is closed
     now_dt = datetime.now(timezone.utc) - timedelta(hours=8) 
@@ -261,9 +259,10 @@ def get_pap_signal(
     pap_signal = int(df["PAP_Score"].iloc[-1])
 
     if pap_signal == 0:
-        return 0, None, df
+        return 0, "N/A", df
     return pap_signal, pap_pattern, df
 
+interval_settings = [(1, 30), (1, 15), (5, 15), (5, 30)]
 def get_trade_signal(
     ticker: str,
     atr_sl_multiplier: float = 1.5,  
@@ -272,13 +271,16 @@ def get_trade_signal(
     if not ticker_exists(ticker):
         raise ValueError("Ticker does not exist")
 
-    pap_signal, pap_pattern, df = get_pap_signal(
-        ticker,
-        lookback_bars=30,
-        interval_minutes=1,
-        rr_ratio=rr_ratio,
-        atr_sl_multiplier=atr_sl_multiplier
-    )
+
+    for interval_minutes, lookback_bars in interval_settings:
+        print(f"-------{interval_minutes}m, {lookback_bars} bars-----")
+        pap_signal, pap_pattern, df = get_pap_signal(
+            ticker,
+            interval_minutes=interval_minutes,
+            lookback_bars=lookback_bars
+        )
+        if pap_signal != 0:
+            break
 
     sent_score, articles = get_news_data_today(ticker)
 
