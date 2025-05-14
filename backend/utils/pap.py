@@ -200,7 +200,7 @@ def precompute_pap_scores_sequential_img_batched_pred(
         BULLISH_INDICES_SET = {1, 2, 5}
         BEARISH_INDICES_SET = {0, 3, 4}
         
-        paps = ['BearishFlag', 'BullishFlag', 'DoubleBottom', 'DoubleTop', 'Head & Shoulders', 'Inverted Head & Shoulders', 'Noise']
+        paps = ['Bearish Flag', 'Bullish Flag', 'Double Bottom', 'Double Top', 'Head & Shoulders', 'Inverted Head & Shoulders', 'Noise']
         prediction_to_string = None
         for i, original_index in enumerate(indices_to_predict):
             predicted_index = all_pred_indices[i]
