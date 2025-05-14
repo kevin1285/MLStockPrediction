@@ -292,7 +292,7 @@ def get_trade_signal(
         signal = "short"
     else:
         if sent_score == 0:
-            return "no action", price, price, sent_score, articles, pap_pattern
+            return "no action", "N/A", "N/A", sent_score, articles, pap_pattern
         signal = "long" if sent_score > 0 else "short"
     
     atr = df["ATR_14"].iloc[-1]

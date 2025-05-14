@@ -80,11 +80,21 @@
           <div class="price-targets">
             <div class="target-item">
               <span class="target-label">Take Profit</span>
-              <span class="target-value">${{ roundDecimal(analysisData.takeProfit, 2) }}</span>
+              <span class="target-value">
+                {{ analysisData.takeProfit === 'N/A' 
+                    ? 'N/A' 
+                    : `${roundDecimal(analysisData.takeProfit, 2)}` 
+                }}
+              </span>
             </div>
             <div class="target-item">
               <span class="target-label">Stop Loss</span>
-              <span class="target-value">${{ roundDecimal(analysisData.stopLoss, 2) }}</span>
+              <span class="target-value">
+                {{ analysisData.stopLoss === 'N/A'
+                  ? 'N/A'
+                  : `${ roundDecimal(analysisData.stopLoss, 2)}` 
+                }}
+              </span>
             </div>
           </div>
         </div>
@@ -173,8 +183,12 @@ const validateSettings = () => {
 }
 
 const roundDecimal = (num, decimalPlaces) => {
-  const roundedStr = num.toFixed(decimalPlaces)
-  return Number(roundedStr) === 0 ? (0).toFixed(decimalPlaces) : roundedStr;
+  try {
+    const roundedStr = num.toFixed(decimalPlaces)
+    return Number(roundedStr) === 0 ? (0).toFixed(decimalPlaces) : roundedStr;
+  } catch (e) { // case where num is not a number 
+    return "N/A";
+  }
 }
 
 const formatDate = (dateString) => {
