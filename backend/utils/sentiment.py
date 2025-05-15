@@ -1,40 +1,55 @@
 from polygon import RESTClient
-
-import torch
-from torch.nn.functional import softmax
-
 import os
-
+import json
 from datetime import datetime, timedelta, timezone, time
 import pytz
+import re
 
-
-POLYGON_API_KEY = os.getenv("POLYGON_API_KEY")
-client = RESTClient(POLYGON_API_KEY)
+client = RESTClient(os.getenv("POLYGON_API_KEY"))
 
 _model = None
-_tokenizer = None
+def get_gemini_model():
+    global _model
+    if _model is None:
+        print("------- GOOGLE GENAI ---------")
+        import google.generativeai as genai
+        print("------- LOADING PAP MODEL ---------")
+        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+        _model = genai.GenerativeModel("gemini-1.5-flash")
+        print("------- PAP MODEL LOAD DONE -------")
+    return _model
 
-def get_sentiment_model():
-    global _model, _tokenizer
-    if _model is None or _tokenizer is None:
-        print("------ IMPORTING TRANSFORMERS ------")
-        from transformers import AutoTokenizer, AutoModelForSequenceClassification
-        print("------ LOADING SENTIMENT MODEL ------")
-        _tokenizer = AutoTokenizer.from_pretrained("yiyanghkust/finbert-tone")
-        _model = AutoModelForSequenceClassification.from_pretrained("yiyanghkust/finbert-tone")
-        print("------ SENTIMENT MODEL LOAD DONE ------")
-    return _model, _tokenizer
+def predict_sentiment(text_arr: list[str], company_name: str):
+    prompt = f"""
+You are a financial sentiment analyst.
 
-def predict_sentiment(text):
-    model, tokenizer = get_sentiment_model()
-    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=128)
-    with torch.no_grad():
-        outputs = model(**inputs)
-        probs = softmax(outputs.logits, dim=-1)[0]  # convert into probabilities that sum to 1
-        #print("Probabilities:", probs) # [P(neutral), P(positive), P(negative)]
-    score = probs[1] - probs[2] # sentiment score = P(positive) - P(negative)
-    return score.item()
+Analyze each of the following news snippets for sentiment toward {company_name}. 
+Give a sentiment score between -1 and 1 for each snippet. 
+Avoid defaulting to neutral (0.0) unless the text truly provides no directional signal. Be more assertive in assigning clearly positive (e.g., 0.9) or negative (e.g., -0.9) scores when sentiment is implied.
+Sometimes, analyzing sentiment may not be straightforward, especially when the company isn't mentioned much. 
+For example, when the text describes macroeconomic, political, or geopolitical conditions (eg tariffs), your score should reflect whether those conditions favor the company.
+
+Only return a JSON array of numbers corresponding to each snippet, without any explanation.
+
+News snippets:
+"""
+    for i, text in enumerate(text_arr, 1):
+        prompt += f"{i}. {text}\n"
+
+    model = get_gemini_model()
+    response = model.generate_content(
+        prompt, 
+        generation_config={
+            "temperature": 0.0
+        }
+    )
+    raw = response.text.strip()
+    print(raw)
+    match = re.search(r"\[.*\]", raw, re.DOTALL)
+    print(match)
+    if match:
+        raw = match.group(0)
+    return json.loads(raw)
 
 def fetch_news_articles(ticker, start_date, end_date, max_articles=10):
     articles = []
@@ -54,21 +69,17 @@ def get_news_data(company_name, from_date, to_date, max_articles=15):
     articles = fetch_news_articles(company_name, from_date, to_date, max_articles)
     if len(articles) == 0:
        return 0, []
-    weighted_sum = 0
-    total_weight = 0
-    processed_articles = []
     
-    for a in articles:
-        if a.description:
-            score = predict_sentiment(a.description)
-            weight = 2
-        else:
-            score = predict_sentiment(a.title)
-            weight = 1
-        weighted_sum += weight * score
-        total_weight += weight
-        
-        processed_articles.append({
+    text_arr = [a.description if a.description else a.title for a in articles]
+    sentiment_scores = predict_sentiment(text_arr, company_name)
+    
+    sentiment_score_sum = 0
+    processed_articles = [None] * len(articles)
+    
+    for i in range(len(articles)):
+        a = articles[i]
+        sentiment_score_sum += sentiment_scores[i]
+        processed_articles[i] = {
             "url": a.article_url,
             "amp_url": a.amp_url,
             "title": a.title,
@@ -83,9 +94,9 @@ def get_news_data(company_name, from_date, to_date, max_articles=15):
             },
             "tickers": a.tickers,
             "keywords": a.keywords,
-            "sentiment_score": score
-        })
-    avg_sentiment = weighted_sum / total_weight
+            "sentiment_score": sentiment_scores[i]
+        }
+    avg_sentiment = sentiment_score_sum / len(articles)
 
     return [avg_sentiment, processed_articles]
 
@@ -93,18 +104,9 @@ def get_news_sentiment(company_name, from_date, to_date, max_articles=15):
     articles = fetch_news_articles(company_name, from_date, to_date, max_articles)
     if len(articles) == 0:
        return 0
-    weighted_sum = 0
-    total_weight = 0
-    for a in articles:
-        if a.description:
-            score = predict_sentiment(a.description)
-            weight = 2
-        else:
-            score = predict_sentiment(a.title)
-            weight = 1
-        weighted_sum += weight * score
-        total_weight += weight
-    avg_sentiment = weighted_sum / total_weight
+    text_arr = [a.description if a.description else a.title for a in articles]
+    sentiment_scores = predict_sentiment(text_arr, company_name)
+    avg_sentiment = sum(sentiment_scores) / len(articles)
     return avg_sentiment
 
 
@@ -135,20 +137,6 @@ def get_news_data_today(company_name, return_articles=True):
 
 
 # ------- TESTS -------------
-def test_single_text_sentiment():
-    print("\n=== Testing Single Text Sentiment Analysis ===")
-    test_texts = [
-        "The company reported strong earnings growth and exceeded market expectations.",
-        "The stock price dropped significantly after the disappointing quarterly results.",
-        "The company announced a new product launch that could revolutionize the market.",
-        "Investors are concerned about the company's high debt levels and declining sales."
-    ]
-    
-    for text in test_texts:
-        score = predict_sentiment(text)
-        print(f"\nText: {text}")
-        print(f"Sentiment score: {score:.3f}")
-
 def test_news_sentiment():
     print("\n=== Testing News Article Sentiment Analysis ===")
     # Test with a few popular stocks
@@ -163,13 +151,6 @@ def test_news_sentiment():
 
 if __name__ == "__main__":
     print("Starting sentiment analysis tests...")
-    
-    # Test single text sentiment
-    #test_single_text_sentiment()
-    
-    # Test news sentiment if API key is available
-    if POLYGON_API_KEY:
-        test_news_sentiment()
-    else:
-        print("\nSkipping news sentiment test - POLYGON_API_KEY not found in .env file")
+    test_news_sentiment()
+
 

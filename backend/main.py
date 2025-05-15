@@ -7,12 +7,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from utils.pap import get_pap_model, get_trade_signal
-from utils.sentiment import get_sentiment_model
+from utils.sentiment import get_gemini_model
 
 @asynccontextmanager
 async def lifespan(app):
     get_pap_model()
-    get_sentiment_model()
+    get_gemini_model()
     yield
 
 app = FastAPI(lifespan=lifespan)
