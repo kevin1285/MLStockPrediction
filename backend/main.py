@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 load_dotenv()
+import os
 
 from utils.pap import get_pap_model, get_trade_signal
 from utils.sentiment import get_gemini_model
@@ -53,4 +54,8 @@ async def analyze_stock(
         }
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+if os.getenv("AWS_EXECUTION_ENV"):
+    from mangum import Mangum
+    handler = Mangum(app)
     
