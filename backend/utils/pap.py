@@ -121,100 +121,44 @@ import tempfile
 from utils.image_generation import generate_image
 
 PAP_CONFIDENCE_THRESHOLD = 0.5
-def precompute_pap_scores_sequential_img_batched_pred(
+def precompute_pap_score(
     df: pd.DataFrame,
     model_input_window: int,
-    batch_size: int = 64
 ) -> pd.DataFrame:
-
-    # Initialize score column
-    df['PAP_Score'] = 0
-    pap_scores = df['PAP_Score'].values
-
-    image_paths_dict = {}
-    lookback = model_input_window - 1
 
     # Generate image
     with tempfile.TemporaryDirectory() as temp_dir:
-        tasks_args = [
-            (i, df, model_input_window, temp_dir)
-            for i in range(lookback, len(df))
-        ]
-        for args in tasks_args:
-            original_index, image_path = generate_image(args)
-            if image_path and os.path.exists(image_path):
-                image_paths_dict[original_index] = image_path
+        image_path = generate_image(df, model_input_window, temp_dir)
 
         # If no images were generated, skip prediction
-        if not image_paths_dict:
-            print("Warning: No images generated. Skipping prediction.")
-            df['PAP_Score'] = pap_scores
-            return df, None
+        if not image_path or not os.path.exists(image_path):
+            return 0, "N/A"  # No valid image
 
-        # Keras prediction
-        indices_to_predict = sorted(image_paths_dict.keys())
-        ordered_image_paths = [image_paths_dict[i] for i in indices_to_predict]
-        num_images = len(ordered_image_paths)
-
-        all_pred_indices = np.full(num_images, -1, dtype=int)
-        all_pred_confidences = np.full(num_images, -1.0, dtype=float)
         try:
-            print(f"Preparing {num_images} images for Keras batch prediction...")
-            img_array_list = []
-            load_failures = 0
-            for i, img_path in enumerate(ordered_image_paths):
-                try:
-                    img = load_img(img_path, target_size=(128, 128), color_mode='rgb')
-                    img_arr = img_to_array(img)
-                    img_array_list.append(img_arr)
-                except Exception as load_err:
-                    print(f"Warning: Keras load failed index {indices_to_predict[i]} ({img_path}): {load_err}")
-                    img_array_list.append(np.zeros((128, 128, 3), dtype=np.uint8))
-                    load_failures += 1
+            img = load_img(image_path, target_size=(128, 128), color_mode='rgb')
+            img_arr = img_to_array(img)
+            img_arr = np.expand_dims(img_arr, axis=0)
 
-            if img_array_list:
-                keras_batch = np.stack(img_array_list, axis=0)
-                pap_model = get_pap_model()
-                raw_preds_batch = pap_model.predict(keras_batch, batch_size=batch_size, verbose=1)
-                
-                print("--------PROBS--------")
-                print(raw_preds_batch)
-
-                if raw_preds_batch.shape[0] == num_images:
-                    all_pred_indices = np.argmax(raw_preds_batch, axis=1).astype(int)
-                    print(all_pred_indices)
-                    all_pred_confidences = np.max(raw_preds_batch, axis=1).astype(float)
-                else:
-                    print("Prediction output shape mismatch.")
-            else:
-                print("No images successfully loaded for Keras prediction.")
-
-            if load_failures > 0:
-                print(f"Warning: {load_failures} images failed to load.")
+            pap_model = get_pap_model()
+            preds = pap_model.predict(img_arr, verbose=0)
+            print(preds)
+            pred_index = int(np.argmax(preds))
+            confidence = float(np.max(preds))
 
         except Exception as e:
-            print(f"ERROR during Keras batch prediction: {e}")
+            print(f"ERROR during Keras  prediction: {e}")
 
         # Assign scores based on confidence threshold
-        print("Stage 3: Assigning scores (1/-1/0) based on confidence threshold...")
         BULLISH_INDICES_SET = {1, 2, 5}
         BEARISH_INDICES_SET = {0, 3, 4}
         
-        paps = ['Bearish Flag', 'Bullish Flag', 'Double Bottom', 'Double Top', 'Head & Shoulders', 'Inverted Head & Shoulders', 'Noise']
-        prediction_to_string = None
-        for i, original_index in enumerate(indices_to_predict):
-            predicted_index = all_pred_indices[i]
-            confidence = all_pred_confidences[i]
-            if predicted_index != -1 and confidence >= PAP_CONFIDENCE_THRESHOLD:
-                if predicted_index in BULLISH_INDICES_SET:
-                    pap_scores[original_index] = 1
-                elif predicted_index in BEARISH_INDICES_SET:
-                    pap_scores[original_index] = -1
-                prediction_to_string = paps[predicted_index]
-                print(prediction_to_string)
-
-    df['PAP_Score'] = pap_scores
-    return df, prediction_to_string
+        pap_strings = ['Bearish Flag', 'Bullish Flag', 'Double Bottom', 'Double Top', 'Head & Shoulders', 'Inverted Head & Shoulders', 'Noise']
+        if pred_index != -1 and confidence >= PAP_CONFIDENCE_THRESHOLD:
+            if pred_index in BULLISH_INDICES_SET:
+                return 1, pap_strings[pred_index]
+            elif pred_index in BEARISH_INDICES_SET:
+                return -1, pap_strings[pred_index]
+    return 0, "ERROR"
 
 
 ATR_PERIOD = 14
@@ -237,7 +181,7 @@ def get_pap_signal(
     lookback_bars: int = 30,
 ):
     # this time delta will be set to 0 in deployment- rn it is constantly changed so we can run predictions when the market is closed
-    now_dt = datetime.now(timezone.utc) - timedelta(hours=8) 
+    now_dt = datetime.now(timezone.utc) - timedelta(hours=9) 
 
     extra = ATR_PERIOD + 10   
     df = get_processed_data(
@@ -250,13 +194,7 @@ def get_pap_signal(
     df = df.iloc[-(lookback_bars):]   # drop older rows
 
     # Compute PAP_Score for that window
-    df, pap_pattern = precompute_pap_scores_sequential_img_batched_pred(
-        df=df,
-        model_input_window=lookback_bars,
-        batch_size=PREDICTION_BATCH_SIZE
-    )
-
-    pap_signal = int(df["PAP_Score"].iloc[-1])
+    pap_signal, pap_pattern = precompute_pap_score(df=df, model_input_window=lookback_bars)
 
     if pap_signal == 0:
         return 0, "N/A", df

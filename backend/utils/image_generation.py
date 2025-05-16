@@ -17,33 +17,26 @@ def make_line_plot_image(df_segment: pd.DataFrame, out_path="temp_plot.png") -> 
     return True
 
 
-def generate_image(args):
-    i, df_ref, window, temp_dir = args
-
+def generate_image(df, window, temp_dir):
     image_path = None
     temp_file_path = None
-    pid = os.getpid()
     try:
-        start_idx = i - window + 1
-        end_idx = i + 1
-        if start_idx < 0:
-            return (i, None)
-        segment = df_ref.iloc[start_idx : end_idx]
-        temp_file_path = os.path.join(temp_dir, f"img_{pid}_{i}.png")
+        segment = df.iloc[-window:]
+        temp_file_path = os.path.join(temp_dir, f"img_{len(df)}.png")
         plot_success = make_line_plot_image(segment[['Close']], out_path=temp_file_path)
         if plot_success:
             image_path = temp_file_path
         else:
             image_path = None
     except Exception as e:
-        print(f"Error in image generation for index {i}: {e}")
+        print(f"Error in image generation: {e}")
         image_path = None
     if not image_path and temp_file_path and os.path.exists(temp_file_path):
          try:
             os.remove(temp_file_path)
          except OSError:
             pass
-         
-    sanity_path = os.path.join('Generated_Images', f"chart_{i}.png")
-    shutil.copy(image_path, sanity_path)
-    return (i, image_path)
+    if not os.getenv("AWS_EXECUTION_ENV"):   
+        sanity_path = os.path.join('Generated_Images', f"chart_{len(df)}.png")
+        shutil.copy(image_path, sanity_path)
+    return image_path
