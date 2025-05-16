@@ -136,21 +136,3 @@ def get_news_data_today(company_name, return_articles=True):
         return get_news_sentiment(company_name, start_dt, end_dt)
 
 
-# ------- TESTS -------------
-def test_news_sentiment():
-    print("\n=== Testing News Article Sentiment Analysis ===")
-    # Test with a few popular stocks
-    test_stocks = ['AAPL', 'TSLA', 'MSFT']
-    end_dt = (datetime.utcnow()).strftime("%Y-%m-%dT%H:%M:%SZ")
-    start_dt = (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    
-    for stock in test_stocks:
-        print(f"\nAnalyzing news sentiment for {stock}:")
-        sentiment = get_news_sentiment(stock, start_dt, end_dt)
-        print(f"Average sentiment score: {sentiment:.3f}")
-
-if __name__ == "__main__":
-    print("Starting sentiment analysis tests...")
-    test_news_sentiment()
-
-

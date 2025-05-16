@@ -4,7 +4,6 @@ uvicorn[standard]==0.34.0
 
 # ML models
 tensorflow==2.18.0
-torch==2.7.0
 transformers==4.50.0
 keras_preprocessing==1.1.2
 
