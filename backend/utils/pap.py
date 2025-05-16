@@ -162,7 +162,6 @@ def precompute_pap_score(
 
 
 ATR_PERIOD = 14
-PREDICTION_BATCH_SIZE = 64 # Batch size for CNN prediction
 
 from .sentiment import get_news_data_today
 from datetime import datetime, timezone, timedelta
@@ -181,7 +180,7 @@ def get_pap_signal(
     lookback_bars: int = 30,
 ):
     # this time delta will be set to 0 in deployment- rn it is constantly changed so we can run predictions when the market is closed
-    now_dt = datetime.now(timezone.utc) - timedelta(hours=9) 
+    now_dt = datetime.now(timezone.utc) - timedelta(hours=0) 
 
     extra = ATR_PERIOD + 10   
     df = get_processed_data(

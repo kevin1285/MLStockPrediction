@@ -1,0 +1,26 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Deploy FastAPI using AWS Lambda and SAM
+
+Resources:
+  FastApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: fastapi-sam
+      Handler: main.handler              # points to main.py
+      Runtime: python3.11
+      CodeUri: .                         # current folder (backend/)
+      MemorySize: 512
+      Timeout: 30
+      Architectures:
+        - x86_64
+      Events:
+        HttpApi:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+Outputs:
+  ApiUrl:
+    Description: "Invoke URL for the FastAPI HTTP API"
+    Value: !Sub "https://${FastApiFunction.HttpApi}.execute-api.${AWS::Region}.amazonaws.com/"

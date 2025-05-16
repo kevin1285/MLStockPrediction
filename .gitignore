@@ -3,6 +3,7 @@
 /frontend/.vite/
 
 /backend/.env
+/backend/.aws-sam/
 
 *.py[co]                 
 __pycache__/             
