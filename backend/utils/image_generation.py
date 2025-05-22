@@ -36,7 +36,10 @@ def generate_image(df, window, temp_dir):
             os.remove(temp_file_path)
          except OSError:
             pass
-    if not os.getenv("AWS_EXECUTION_ENV"):   
-        sanity_path = os.path.join('Generated_Images', f"chart_{len(df)}.png")
-        shutil.copy(image_path, sanity_path)
+    if not os.getenv("AWS_EXECUTION_ENV"):  
+        if image_path and os.path.exists(image_path): 
+            sanity_path = os.path.join('Generated_Images', f"chart_{len(df)}.png")
+            shutil.copy(image_path, sanity_path)
+        else:
+            print("No image generated")
     return image_path

@@ -1,14 +1,11 @@
 import os
 
-from polygon import RESTClient
-
 import pandas as pd
 import numpy as np 
 
 from keras_preprocessing.image import load_img, img_to_array
 
-POLYGON_API_KEY = os.getenv("POLYGON_API_KEY")
-client = RESTClient(POLYGON_API_KEY)
+import yfinance as yf
 
 PAP_MODEL_PATH = 'ml_models/MulticlassPAP_20k_v2.keras'
 
@@ -56,65 +53,60 @@ def calculate_max_drawdown(equity_series: pd.Series) -> float: #calculates max d
 
 
 def get_processed_data(ticker: str, interval: str, start_dt: str, end_dt: str, atr_period: int = 14) -> pd.DataFrame | None:
-    def convert_to_et(dt_str: str) -> str: # only used for print()
+    def convert_to_et(dt_str: str) -> str:
         dt = pd.to_datetime(dt_str)
         if dt.tz is None:
             dt = dt.tz_localize('UTC')
         et = dt.tz_convert('America/New_York')
         return et.strftime('%Y-%m-%d %H:%M:%S ET')
 
-    print(f"\n--- Processing {ticker} for Interval: {interval} from {convert_to_et(start_dt)} to {convert_to_et(end_dt)} using Polygon.io ---")
-    interval_map_poly = {'1m': (1, 'minute'), '5m': (5, 'minute'), '15m': (15, 'minute'), '30m': (30, 'minute'), '60m': (1, 'hour')}
-    interval_map_pd = {'1m': '1min', '5m': '5min', '15m': '15min', '30m': '30min', '60m': 'H'}
+    print(f"\n--- Processing {ticker} for Interval: {interval} from {convert_to_et(start_dt)} to {convert_to_et(end_dt)} using yfinance ---")
 
-    if interval not in interval_map_poly:
-       print(f"Error: Interval '{interval}' not mapped for Polygon.io.")
-       return None
+    valid_intervals = ['1m', '2m', '5m', '15m', '30m', '60m', '90m', '1h', '1d']
+    if interval not in valid_intervals:
+        print(f"Error: Interval '{interval}' not supported by yfinance.")
+        return None
 
-    multiplier, timespan = interval_map_poly[interval]
-    pd_freq = interval_map_pd[interval]
-    print(f"Requesting Polygon.io: Symbol={ticker}, Multiplier={multiplier}, Timespan={timespan}, Start={convert_to_et(start_dt)}, End={convert_to_et(end_dt)}")
-    all_aggs_data = []
+    # Fetch OHLCV data
+    df = yf.download(ticker, start=start_dt, end=end_dt, interval=interval, progress=False)
 
-    aggs_iterator = client.list_aggs(ticker=ticker, multiplier=multiplier, timespan=timespan, from_=start_dt, to=end_dt, adjusted=True, limit=50000)
-    for agg in aggs_iterator:
-        all_aggs_data.append({'timestamp': agg.timestamp, 'open': agg.open, 'high': agg.high, 'low': agg.low, 'close': agg.close, 'volume': agg.volume})
+    if df.empty:
+        print("No data returned by yfinance.")
+        return None
 
-    raw_df = pd.DataFrame(all_aggs_data)
+    if isinstance(df.columns, pd.MultiIndex):
+        # keep only the first level: 'Open', 'High', ...
+        df.columns = df.columns.get_level_values(0)
 
-    print(raw_df.columns.tolist())
-    # Processing
-    raw_df['timestamp'] = pd.to_datetime(raw_df['timestamp'], unit='ms', utc=True)
-    raw_df.set_index('timestamp', inplace=True)
+    df.index = pd.to_datetime(df.index, utc=True)
+    df.sort_index(inplace=True)
 
-    rename_map = {'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'volume': 'Volume'}
-    raw_df.rename(columns=rename_map, inplace=True)
+    # Keep only necessary columns
     cols_to_keep = ['Open', 'High', 'Low', 'Close', 'Volume']
+    df = df[cols_to_keep].copy()
 
-    processed_data = raw_df[[col for col in cols_to_keep if col in raw_df.columns]].copy()
-    processed_data.sort_index(ascending=True, inplace=True)
-
+    # Convert columns to numeric
     for col in cols_to_keep:
-        if col in processed_data.columns:
-            processed_data[col] = pd.to_numeric(processed_data[col], errors='coerce')
+        df[col] = pd.to_numeric(df[col], errors='coerce')
 
-    rows_before_na = len(processed_data); processed_data.dropna(subset=cols_to_keep, inplace=True)
-    if len(processed_data) < rows_before_na:
-        print(f"Dropped {rows_before_na - len(processed_data)} initial NaN rows.")
-    if processed_data.empty:
-        print("Data empty after initial NaN drop."); return None
+    rows_before_na = len(df)
+    df.dropna(subset=cols_to_keep, inplace=True)
+    if len(df) < rows_before_na:
+        print(f"Dropped {rows_before_na - len(df)} initial NaN rows.")
+    if df.empty:
+        print("Data empty after initial NaN drop.")
+        return None
 
     # Calculate ATR
     atr_col_name = f"ATR_{atr_period}"
-    processed_data[atr_col_name] = calculate_atr(processed_data.copy(), atr_period)
-    rows_before_atr_na=len(processed_data)
-    processed_data.dropna(subset=[atr_col_name], inplace=True)
-    rows_after_atr_na=len(processed_data)
+    df[atr_col_name] = calculate_atr(df.copy(), atr_period)
+    df.dropna(subset=[atr_col_name], inplace=True)
 
-    final_expected_cols=cols_to_keep+[atr_col_name]
-    if not all(col in processed_data.columns for col in final_expected_cols):
-        raise ValueError(f"Final columns missing: {processed_data.columns.tolist()}")
-    return processed_data
+    expected_cols = cols_to_keep + [atr_col_name]
+    if not all(col in df.columns for col in expected_cols):
+        raise ValueError(f"Final columns missing: {df.columns.tolist()}")
+
+    return df
 
 
 import tempfile
@@ -169,7 +161,7 @@ from datetime import datetime, timezone, timedelta
 
 def ticker_exists(ticker: str) -> bool:
     try:
-        client.get_ticker_details(ticker)
+        yf.Ticker(ticker).info 
         return True
     except Exception:
         return False
@@ -180,7 +172,7 @@ def get_pap_signal(
     lookback_bars: int = 30,
 ):
     # this time delta will be set to 0 in deployment- rn it is constantly changed so we can run predictions when the market is closed
-    now_dt = datetime.now(timezone.utc) - timedelta(hours=0) 
+    now_dt = datetime.now(timezone.utc) - timedelta(hours=11) 
 
     extra = ATR_PERIOD + 10   
     df = get_processed_data(
@@ -199,7 +191,7 @@ def get_pap_signal(
         return 0, "N/A", df
     return pap_signal, pap_pattern, df
 
-interval_settings = [(1, 30), (1, 15), (1, 60), (5, 15), (5, 30), (15, 15)]
+interval_settings = [(1, 15), (1, 30), (1, 45), (1, 60), (2, 15), (2, 30), (2, 45), (2, 60)]
 def get_trade_signal(
     ticker: str,
     atr_sl_multiplier: float = 1.5,  
