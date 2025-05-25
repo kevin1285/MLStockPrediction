@@ -110,11 +110,13 @@ def get_processed_data(ticker: str, interval: str, start_dt: str, end_dt: str, a
 
 
 import tempfile
+import shutil
 from utils.image_generation import generate_image
 
 PAP_CONFIDENCE_THRESHOLD = 0.5
 def precompute_pap_score(
     df: pd.DataFrame,
+    interval_minutes: int,
     model_input_window: int,
 ) -> pd.DataFrame:
 
@@ -145,12 +147,16 @@ def precompute_pap_score(
         BEARISH_INDICES_SET = {0, 3, 4}
         
         pap_strings = ['Bearish Flag', 'Bullish Flag', 'Double Bottom', 'Double Top', 'Head & Shoulders', 'Inverted Head & Shoulders', 'Noise']
+        signal_prediction, pap_prediction = 0, 'Noise'
         if pred_index != -1 and confidence >= PAP_CONFIDENCE_THRESHOLD:
             if pred_index in BULLISH_INDICES_SET:
-                return 1, pap_strings[pred_index]
+                signal_prediction, pap_prediction = 1, pap_strings[pred_index]
             elif pred_index in BEARISH_INDICES_SET:
-                return -1, pap_strings[pred_index]
-    return 0, "ERROR"
+                signal_prediction, pap_prediction = -1, pap_strings[pred_index]
+            # sanity check image
+            sanity_path = os.path.join('Generated_Images', f"{pap_prediction}_{interval_minutes}_{model_input_window}.png")
+            shutil.copy(image_path, sanity_path)
+    return signal_prediction, pap_prediction
 
 
 ATR_PERIOD = 14
@@ -172,7 +178,7 @@ def get_pap_signal(
     lookback_bars: int = 30,
 ):
     # this time delta will be set to 0 in deployment- rn it is constantly changed so we can run predictions when the market is closed
-    now_dt = datetime.now(timezone.utc) - timedelta(hours=11) 
+    now_dt = datetime.now(timezone.utc) - timedelta(hours=35) 
 
     extra = ATR_PERIOD + 10   
     df = get_processed_data(
@@ -185,13 +191,13 @@ def get_pap_signal(
     df = df.iloc[-(lookback_bars):]   # drop older rows
 
     # Compute PAP_Score for that window
-    pap_signal, pap_pattern = precompute_pap_score(df=df, model_input_window=lookback_bars)
+    pap_signal, pap_pattern = precompute_pap_score(df, interval_minutes, lookback_bars)
 
     if pap_signal == 0:
         return 0, "N/A", df
     return pap_signal, pap_pattern, df
 
-interval_settings = [(1, 15), (1, 30), (1, 45), (1, 60), (2, 15), (2, 30), (2, 45), (2, 60)]
+interval_settings = [(1, 10), (1, 15), (1, 30), (1, 45), (2, 10), (2, 15), (2, 30), (2, 45), (5, 10), (5, 15)]
 def get_trade_signal(
     ticker: str,
     atr_sl_multiplier: float = 1.5,  

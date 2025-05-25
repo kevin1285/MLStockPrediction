@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import os
 import numpy as np  
 import pandas as pd
-import shutil
 
 def make_line_plot_image(df_segment: pd.DataFrame, out_path="temp_plot.png") -> bool:
     if df_segment is None or df_segment.empty or 'Close' not in df_segment.columns or df_segment['Close'].isnull().all():
@@ -36,10 +35,4 @@ def generate_image(df, window, temp_dir):
             os.remove(temp_file_path)
          except OSError:
             pass
-    if not os.getenv("AWS_EXECUTION_ENV"):  
-        if image_path and os.path.exists(image_path): 
-            sanity_path = os.path.join('Generated_Images', f"chart_{len(df)}.png")
-            shutil.copy(image_path, sanity_path)
-        else:
-            print("No image generated")
     return image_path
