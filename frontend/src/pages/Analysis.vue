@@ -62,6 +62,7 @@
           </div>
         </div>
       </div>
+      
 
       <div v-if="loading" class="loading">
         <div class="spinner"></div>
@@ -70,136 +71,44 @@
 
       <div v-if="analysisData" class="analysis-results">
         <div class="result-card">
-          <h3>Prediction</h3>
-          <div class="prediction-value">{{ analysisData.prediction }}</div>
-          <div v-if="analysisData.papPattern" class="pap-pattern">Pattern: {{ analysisData.papPattern }}</div>
+          <Prediction :tradeSignal="analysisData.tradeSignal" :papPattern="analysisData.papPattern"/>
         </div>
 
         <div class="result-card">
-          <h3>Price Targets</h3>
-          <div class="price-targets">
-            <div class="target-item">
-              <span class="target-label">Take Profit</span>
-              <span class="target-value">
-                {{ analysisData.takeProfit === 'N/A' 
-                    ? 'N/A' 
-                    : `${roundDecimal(analysisData.takeProfit, 2)}` 
-                }}
-              </span>
-            </div>
-            <div class="target-item">
-              <span class="target-label">Stop Loss</span>
-              <span class="target-value">
-                {{ analysisData.stopLoss === 'N/A'
-                  ? 'N/A'
-                  : `${ roundDecimal(analysisData.stopLoss, 2)}` 
-                }}
-              </span>
-            </div>
-          </div>
+          <PriceTargets :takeProfit="analysisData.takeProfit" :stopLoss="analysisData.stopLoss" />
         </div>
         
         <div class="result-card">
-          <h3>Market Sentiment</h3>
-          <SentimentDisplay :sentiment="analysisData.sentiment" />
+          <Sentiment :sentiment="analysisData.sentiment" />
         </div>
-
-        <div class="news-section">
-          <h3>Latest News</h3>
-          <div class="news-grid">
-            <a v-for="article in analysisData.articles" 
-               :key="article.url" 
-               :href="article.url" 
-               target="_blank" 
-               rel="noopener" 
-               class="news-card">
-              <div class="news-image" v-if="article.image_url">
-                <img :src="article.image_url" :alt="article.title">
-              </div>
-              <div class="news-content">
-                <div class="news-header">
-                  <img v-if="article.publisher.logo_url" :src="article.publisher.logo_url" :alt="article.publisher.name" class="publisher-logo">
-                  <span class="publisher-name">{{ article.publisher.name }}</span>
-                  <span class="publish-date">{{ formatDate(article.published_utc) }}</span>
-                </div>
-                <h4 class="news-title">{{ article.title }}</h4>
-                <p class="news-description" v-if="article.description">{{ article.description }}</p>
-                <div class="news-footer">
-                  <div class="news-meta">
-                    <span v-if="article.author && article.author !== 'N/A'" class="author">By {{ article.author }}</span>
-                    <span v-else class="author">By Unknown Author</span>
-                    <div class="keywords" v-if="article.keywords && article.keywords.length">
-                      <span v-for="keyword in article.keywords.slice(0, 3)" :key="keyword" class="keyword-tag">
-                        {{ keyword }}
-                      </span>
-                    </div>
-                  </div>
-                  <span>{{ roundDecimal(article.sentiment_score, 2) }}</span>
-                </div>
-              </div>
-            </a>
-          </div>
-        </div>
+        
+        <News :articles="analysisData.articles"/>
       </div>
     </section>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useToast } from 'vue-toastification'
-import SentimentDisplay from '../components/SentimentDisplay.vue'
+import { ref } from 'vue';
+import { useToast } from 'vue-toastification';
+import Prediction from '../components/Prediction.vue';
+import PriceTargets from '../components/PriceTargets.vue'
+import Sentiment from '../components/Sentiment.vue';
+import News from '../components/News.vue'
 
 const toast = useToast();
 
-const ticker = ref('')
-const loading = ref(false)
-const analysisData = ref(null)
-const showSettings = ref(false)
-const settingsValid = ref(true)
+const ticker = ref('');
+const loading = ref(false);
+const analysisData = ref(null);
+const showSettings = ref(false);
+const settingsValid = ref(true);
 
 const DEFAULT_RR_RATIO = 1.5;
 const DEFAULT_ATR_SL_MULTIPLIER = 1.5;
 
-const rrRatio = ref(DEFAULT_RR_RATIO)
-const atrSlMultiplier = ref(DEFAULT_ATR_SL_MULTIPLIER)
-
-const validateSettings = () => {
-  settingsValid.value = true;
-  if (rrRatio.value < 0.5 || rrRatio.value > 10) {
-    toast.error("Risk/Reward ratio must be between 0.5 and 10.");
-    rrRatio.value = DEFAULT_RR_RATIO;
-    settingsValid.value = false;
-    return false;
-  }
-
-  if (atrSlMultiplier.value < 1 || atrSlMultiplier.value > 5) {
-    toast.error("Stop-loss multiplier must be between 1.0 and 5.0.");
-    atrSlMultiplier.value = DEFAULT_ATR_SL_MULTIPLIER;
-    settingsValid.value = false;
-    return false;
-  }
-  return true;
-}
-
-const roundDecimal = (num, decimalPlaces) => {
-  try {
-    const roundedStr = num.toFixed(decimalPlaces)
-    return Number(roundedStr) === 0 ? (0).toFixed(decimalPlaces) : roundedStr;
-  } catch (e) { // case where num is not a number 
-    return "N/A";
-  }
-}
-
-const formatDate = (dateString) => {
-  const date = new Date(dateString)
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(date)
-}
+const rrRatio = ref(DEFAULT_RR_RATIO);
+const atrSlMultiplier = ref(DEFAULT_ATR_SL_MULTIPLIER);
 
 const isMarketOpen = () => {
   return true;
@@ -227,7 +136,7 @@ const analyzeStock = async () => {
     }
     const analysis = await res.json();
     analysisData.value = {
-      prediction: analysis.signal,
+      tradeSignal: analysis.signal,
       sentiment: analysis.sentiment_score,
       takeProfit: analysis.take_profit,
       stopLoss: analysis.stop_loss,
@@ -243,6 +152,24 @@ const analyzeStock = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const validateSettings = () => {
+  settingsValid.value = true;
+  if (rrRatio.value < 0.5 || rrRatio.value > 10) {
+    toast.error("Risk/Reward ratio must be between 0.5 and 10.");
+    rrRatio.value = DEFAULT_RR_RATIO;
+    settingsValid.value = false;
+    return false;
+  }
+
+  if (atrSlMultiplier.value < 1 || atrSlMultiplier.value > 5) {
+    toast.error("Stop-loss multiplier must be between 1.0 and 5.0.");
+    atrSlMultiplier.value = DEFAULT_ATR_SL_MULTIPLIER;
+    settingsValid.value = false;
+    return false;
+  }
+  return true;
 }
 </script>
 
@@ -336,201 +263,6 @@ const analyzeStock = async () => {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
-}
-
-.analysis-results {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
-  margin-top: 2rem;
-}
-
-.result-card {
-  background: white;
-  padding: 2rem;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.result-card h3 {
-  color: #2d3748;
-  margin-bottom: 1rem;
-  font-size: 1.2rem;
-}
-
-.prediction-value {
-  font-size: 2rem;
-  font-weight: bold;
-  color: #2d3748;
-  text-transform: capitalize;
-}
-
-.risk-level {
-  display: inline-block;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-weight: 500;
-}
-
-.price-targets {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.target-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem;
-  background: #f8fafc;
-  border-radius: 8px;
-}
-
-.target-label {
-  color: #4a5568;
-  font-weight: 500;
-}
-
-.target-value {
-  font-size: 1.25rem;
-  font-weight: bold;
-  color: #2d3748;
-}
-
-.news-section {
-  grid-column: 1 / -1;
-  background: white;
-  padding: 2rem;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.news-section h3 {
-  color: #2d3748;
-  margin-bottom: 1.5rem;
-  font-size: 1.5rem;
-}
-
-.news-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-}
-
-.news-card {
-  background: #f8fafc;
-  border-radius: 8px;
-  overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
-  cursor: pointer;
-  text-decoration: none;
-  display: block;
-  color: inherit;
-}
-
-.news-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-}
-
-.news-image {
-  width: 100%;
-  height: 200px;
-  overflow: hidden;
-}
-
-.news-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.news-content {
-  padding: 1.5rem;
-}
-
-.news-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.publisher-logo {
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
-}
-
-.publisher-name {
-  font-weight: 500;
-  color: #4a5568;
-}
-
-.publish-date {
-  margin-left: auto;
-  font-size: 0.875rem;
-  color: #718096;
-}
-
-.news-title {
-  margin: 0 0 0.75rem;
-  font-size: 1.25rem;
-  line-height: 1.4;
-  color: #2d3748;
-}
-
-.news-title:hover {
-  color: #4a5568;
-}
-
-.news-description {
-  color: #4a5568;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  margin-bottom: 1rem;
-}
-
-.news-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e2e8f0;
-}
-
-.news-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.author {
-  font-size: 0.875rem;
-  color: #4a5568;
-}
-
-.keywords {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.keyword-tag {
-  background: #edf2f7;
-  color: #4a5568;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-}
-
-.sentiment-indicator {
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.875rem;
-  font-weight: 500;
 }
 
 .settings-btn {
@@ -650,10 +382,30 @@ const analyzeStock = async () => {
   transform: none !important;
 }
 
-.pap-pattern {
+.analysis-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
   margin-top: 2rem;
+}
+
+.result-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.result-card h3 {
+  color: #2d3748;
+  margin-bottom: 1rem;
   font-size: 1.2rem;
-  color: #764ba2;
+}
+
+.risk-level {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
   font-weight: 500;
 }
 
@@ -678,14 +430,6 @@ const analyzeStock = async () => {
 
   .analyze-btn, .settings-btn {
     flex: 0 0 auto;
-  }
-
-  .news-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .news-card {
-    max-width: 100%;
   }
 }
 </style> 

@@ -1,5 +1,6 @@
 <!-- SentimentGauge.vue -->
 <template>
+  <h3>Market Sentiment</h3>
   <div class="sentiment-gauge">
     <div class="sentiment-value">{{ roundDecimal(sentiment, 2) }}</div>
 
