@@ -7,6 +7,8 @@ from keras_preprocessing.image import load_img, img_to_array
 
 import yfinance as yf
 
+from utils.exceptions import AppException
+
 PAP_MODEL_PATH = 'ml_models/MulticlassPAP_20k_v2.keras'
 
 _pap_model = None
@@ -23,7 +25,7 @@ def get_pap_model():
 def calculate_atr(data: pd.DataFrame, period: int) -> pd.Series:
     required_cols = ['High', 'Low', 'Close']
     if not all(col in data.columns for col in required_cols):
-        raise ValueError(f"ATR: Missing columns {required_cols}.")
+        raise AppException(f"ATR: Missing columns {required_cols}.", 500)
 
     high_low = data['High'] - data['Low']
     high_close_prev = (data['High'] - data['Close'].shift(1)).abs()
@@ -38,7 +40,7 @@ def calculate_atr(data: pd.DataFrame, period: int) -> pd.Series:
     atr = true_range.ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
 
     if not isinstance(atr, pd.Series):
-        raise TypeError("ATR calculation failed.")
+        raise AppException("ATR calculation failed.", 500)
 
     return atr.rename(f"ATR_{period}")
 
@@ -104,7 +106,7 @@ def get_processed_data(ticker: str, interval: str, start_dt: str, end_dt: str, a
 
     expected_cols = cols_to_keep + [atr_col_name]
     if not all(col in df.columns for col in expected_cols):
-        raise ValueError(f"Final columns missing: {df.columns.tolist()}")
+        raise AppException(f"Final columns missing: {df.columns.tolist()}", 500)
 
     return df
 
@@ -140,7 +142,7 @@ def precompute_pap_score(
             confidence = float(np.max(preds))
 
         except Exception as e:
-            print(f"ERROR during Keras  prediction: {e}")
+            raise AppException(f"Error during Keras prediction: {e}", 500)
 
         # Assign scores based on confidence threshold
         BULLISH_INDICES_SET = {1, 2, 5}
@@ -178,7 +180,7 @@ def get_pap_signal(
     lookback_bars: int = 30,
 ):
     # this time delta will be set to 0 in deployment- rn it is constantly changed so we can run predictions when the market is closed
-    now_dt = datetime.now(timezone.utc) - timedelta(hours=35) 
+    now_dt = datetime.now(timezone.utc) - timedelta(hours=11) 
 
     extra = ATR_PERIOD + 10   
     df = get_processed_data(
@@ -204,7 +206,7 @@ def get_trade_signal(
     rr_ratio: float = 1.5, 
 ):
     if not ticker_exists(ticker):
-        raise ValueError("Ticker does not exist")
+        raise AppException("Invalid ticker symbol. Please try again", 404)
 
 
     for interval_minutes, lookback_bars in interval_settings:

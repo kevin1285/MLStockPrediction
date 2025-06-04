@@ -126,22 +126,20 @@ const analyzeStock = async () => {
   loading.value = true
   try {
     const res = await fetch(`http://localhost:8000/api/analysis/${ticker.value}?rr_ratio=${rrRatio.value}&atr_sl_multiplier=${atrSlMultiplier.value}`)
-    if (res.status === 404) {
-      toast.error("Invalid ticker symbol. Please try again.");
-      return;
-    }
+    const data = await res.json();
+
     if (!res.ok) {
-      toast.error("Unexpected error occurred.");
+      toast.error(data.detail || "Unexpected error occurred.");
       return
     }
-    const analysis = await res.json();
+    
     analysisData.value = {
-      tradeSignal: analysis.signal,
-      sentiment: analysis.sentiment_score,
-      takeProfit: analysis.take_profit,
-      stopLoss: analysis.stop_loss,
-      articles: analysis.articles,
-      papPattern: analysis.pap_pattern
+      tradeSignal: data.signal,
+      sentiment: data.sentiment_score,
+      takeProfit: data.take_profit,
+      stopLoss: data.stop_loss,
+      articles: data.articles,
+      papPattern: data.pap_pattern
     };
   } catch (error) {
     if (error instanceof TypeError && error.message.includes("Failed to fetch")) {
