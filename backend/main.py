@@ -9,6 +9,7 @@ import os
 
 from utils.pap import get_pap_model, get_trade_signal
 from utils.sentiment import get_gemini_model
+from utils.exceptions import AppException
 
 @asynccontextmanager
 async def lifespan(app):
@@ -52,8 +53,8 @@ async def analyze_stock(
             "articles": articles,
             "pap_pattern": pap_pattern
         }
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    except AppException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
 
 if os.getenv("AWS_EXECUTION_ENV"):
     from mangum import Mangum
