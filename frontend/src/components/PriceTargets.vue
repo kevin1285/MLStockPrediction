@@ -37,28 +37,28 @@ defineProps({
 }
 
 .price-targets {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
 .target-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem;
-  background: #f8fafc;
-  border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: #f8fafc;
+    border-radius: 8px;
 }
 
 .target-label {
-  color: #4a5568;
-  font-weight: 500;
+    color: #4a5568;
+    font-weight: 500;
 }
 
 .target-value {
-  font-size: 1.25rem;
-  font-weight: bold;
-  color: #2d3748;
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #2d3748;
 }
 </style>
