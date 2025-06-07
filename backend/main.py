@@ -56,7 +56,4 @@ async def analyze_stock(
     except AppException as e:
         raise HTTPException(status_code=e.status_code, detail=e.message)
 
-if os.getenv("AWS_EXECUTION_ENV"):
-    from mangum import Mangum
-    handler = Mangum(app)
     
