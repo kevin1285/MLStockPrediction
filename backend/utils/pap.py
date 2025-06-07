@@ -9,16 +9,17 @@ import yfinance as yf
 
 from utils.exceptions import AppException
 
-PAP_MODEL_PATH = 'ml_models/MulticlassPAP_20k_v2.keras'
+PAP_MODEL_PATH = 'ml_models/MulticlassPAP_20k_v2.tflite'
 
 _pap_model = None
 def get_pap_model():
     global _pap_model
     if _pap_model is None:
-        print("------- IMPORTING TF ---------")
-        from tensorflow import keras
+        print("------- IMPORTING TFLITE ---------")
+        import tflite_runtime.interpreter as tflite
         print("------- LOADING PAP MODEL ---------")
-        _pap_model = keras.models.load_model(PAP_MODEL_PATH, compile=False)
+        _pap_model = tflite.Interpreter(model_path=PAP_MODEL_PATH)
+        _pap_model.allocate_tensors()
         print("------- PAP MODEL LOAD DONE -------")
     return _pap_model
 
@@ -112,7 +113,6 @@ def get_processed_data(ticker: str, interval: str, start_dt: str, end_dt: str, a
 
 
 import tempfile
-import shutil
 from utils.image_generation import generate_image
 
 PAP_CONFIDENCE_THRESHOLD = 0.5
@@ -136,13 +136,25 @@ def precompute_pap_score(
             img_arr = np.expand_dims(img_arr, axis=0)
 
             pap_model = get_pap_model()
-            preds = pap_model.predict(img_arr, verbose=0)
+            
+            # Get input and output tensors
+            input_details = pap_model.get_input_details()
+            output_details = pap_model.get_output_details()
+            
+            # Set the input tensor
+            pap_model.set_tensor(input_details[0]['index'], img_arr)
+            
+            # Run inference
+            pap_model.invoke()
+            
+            # Get the output
+            preds = pap_model.get_tensor(output_details[0]['index'])
             print(preds)
             pred_index = int(np.argmax(preds))
             confidence = float(np.max(preds))
 
         except Exception as e:
-            raise AppException(f"Error during Keras prediction: {e}", 500)
+            raise AppException(f"Error during TFLite prediction: {e}", 500)
 
         # Assign scores based on confidence threshold
         BULLISH_INDICES_SET = {1, 2, 5}

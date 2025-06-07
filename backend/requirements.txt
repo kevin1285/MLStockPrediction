@@ -3,7 +3,7 @@ fastapi==0.115.6
 uvicorn[standard]==0.34.0
 
 # ML models
-tensorflow==2.18.0
+tflite-runtime==2.14.0
 pillow==11.0.0
 
 # Data science
