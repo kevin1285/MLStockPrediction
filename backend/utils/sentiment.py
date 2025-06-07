@@ -2,7 +2,7 @@ from newsapi import NewsApiClient
 from polygon import RESTClient
 import os
 import json
-from datetime import datetime, timedelta, timezone, time
+from datetime import datetime, timedelta, timezone
 import pytz
 import re
 
