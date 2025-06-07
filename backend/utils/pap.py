@@ -16,7 +16,7 @@ def get_pap_model():
     global _pap_model
     if _pap_model is None:
         print("------- IMPORTING TFLITE ---------")
-        import tflite_runtime.interpreter as tflite
+        import tensorflow.lite as tflite
         print("------- LOADING PAP MODEL ---------")
         _pap_model = tflite.Interpreter(model_path=PAP_MODEL_PATH)
         _pap_model.allocate_tensors()
