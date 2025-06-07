@@ -4,7 +4,7 @@ uvicorn[standard]==0.34.0
 
 # ML models
 tensorflow==2.18.0
-keras_preprocessing==1.1.2
+pillow==11.0.0
 
 # Data science
 pandas==2.2.3
@@ -14,7 +14,6 @@ matplotlib==3.10.3
 # APIs
 polygon-api-client==1.14.4
 newsapi-python==0.2.7
-yfinance==0.2.61
 google-generativeai==0.8.5
 
 # Misc

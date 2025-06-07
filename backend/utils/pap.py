@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import numpy as np 
 
-from keras_preprocessing.image import load_img, img_to_array
+from PIL import Image
 
 import yfinance as yf
 
@@ -131,8 +131,8 @@ def precompute_pap_score(
             return 0, "N/A"  # No valid image
 
         try:
-            img = load_img(image_path, target_size=(128, 128), color_mode='rgb')
-            img_arr = img_to_array(img)
+            img = Image.open(image_path).convert('RGB').resize((128, 128))
+            img_arr = np.array(img, dtype=np.float32)
             img_arr = np.expand_dims(img_arr, axis=0)
 
             pap_model = get_pap_model()
@@ -180,7 +180,7 @@ def get_pap_signal(
     lookback_bars: int = 30,
 ):
     # this time delta will be set to 0 in deployment- rn it is constantly changed so we can run predictions when the market is closed
-    now_dt = datetime.now(timezone.utc) - timedelta(hours=11) 
+    now_dt = datetime.now(timezone.utc) - timedelta(hours=27) 
 
     extra = ATR_PERIOD + 10   
     df = get_processed_data(

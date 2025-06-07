@@ -5,7 +5,6 @@ import json
 from datetime import datetime, timedelta, timezone, time
 import pytz
 import re
-import yfinance as yf
 
 polygon_client = RESTClient(os.getenv("POLYGON_API_KEY"))
 newsapi_client = NewsApiClient(os.getenv("NEWSAPI_API_KEY"))
@@ -90,13 +89,12 @@ def fetch_newsapi_articles(ticker, start_date, end_date, max_articles=7):
     start_date = to_newsapi_datetime(start_date)
     end_date = to_newsapi_datetime(end_date)
 
-    info = yf.Ticker(ticker).info
-    company_name = info.get("shortName", info.get("longName"))
-    print(f"Fetching newsapi for {ticker} ({company_name}) from {start_date} to {end_date}")
+
+    print(f"Fetching newsapi for {ticker} from {start_date} to {end_date}")
 
     try:
         data = newsapi_client.get_everything(
-            q=f"{ticker} OR {company_name}",
+            q=f"{ticker}",
             from_param=start_date,
             to=end_date,
             language='en',
