@@ -156,8 +156,8 @@ def precompute_pap_score(
             elif pred_index in BEARISH_INDICES_SET:
                 signal_prediction, pap_prediction = -1, pap_strings[pred_index]
             # sanity check image
-            sanity_path = os.path.join('Generated_Images', f"{pap_prediction}_{interval_minutes}_{model_input_window}.png")
-            shutil.copy(image_path, sanity_path)
+            # sanity_path = os.path.join('Generated_Images', f"{pap_prediction}_{interval_minutes}_{model_input_window}.png")
+            # shutil.copy(image_path, sanity_path)
     return signal_prediction, pap_prediction
 
 
