@@ -123,14 +123,14 @@ const analyzeStock = async () => {
     toast.error("Market is closed");
     return;
   }
-  loading.value = true
+  loading.value = true;
   try {
-    const res = await fetch(`http://localhost:8000/api/analysis/${ticker.value}?rr_ratio=${rrRatio.value}&atr_sl_multiplier=${atrSlMultiplier.value}`)
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/analysis/${ticker.value}?rr_ratio=${rrRatio.value}&atr_sl_multiplier=${atrSlMultiplier.value}`)
     const data = await res.json();
 
     if (!res.ok) {
       toast.error(data.detail || "Unexpected error occurred.");
-      return
+      return;
     }
     
     analysisData.value = {
