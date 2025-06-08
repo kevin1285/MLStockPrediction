@@ -21,7 +21,7 @@ app = FastAPI(lifespan=lifespan)
 
 
 if os.getenv("ENVIRONMENT") == "prod":
-    allowed_origins = ["http://52.14.86.214"]
+    allowed_origins = ["https://trade-sense.netlify.app/"]
 else:
     allowed_origins = ["*"]
     

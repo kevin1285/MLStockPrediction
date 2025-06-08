@@ -176,7 +176,7 @@ def precompute_pap_score(
 ATR_PERIOD = 14
 
 from .sentiment import get_news_data_today
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 
 def ticker_exists(ticker: str) -> bool:
@@ -191,8 +191,9 @@ def get_pap_signal(
     interval_minutes: int = 1,
     lookback_bars: int = 30,
 ):
-    # this time delta will be set to 0 in deployment- rn it is constantly changed so we can run predictions when the market is closed
-    now_dt = datetime.now(timezone.utc) - timedelta(hours=27) 
+    # Fixed time for testing: 1:00 PM EST (6:00 PM UTC)
+    now_dt = datetime(2025, 6, 4, 18, 0, 0, tzinfo=timezone.utc)
+    #now_dt = datetime.now(timezone.utc);
 
     extra = ATR_PERIOD + 10   
     df = get_processed_data(

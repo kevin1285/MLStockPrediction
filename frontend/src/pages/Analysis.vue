@@ -96,6 +96,7 @@ import PriceTargets from '../components/PriceTargets.vue'
 import Sentiment from '../components/Sentiment.vue';
 import News from '../components/News.vue'
 
+const api_root_url = import.meta.env.VITE_ENVIRONMENT === "PROD" ? "http://52.14.86.214" : "http://localhost:8000";
 const toast = useToast();
 
 const ticker = ref('');
@@ -125,7 +126,7 @@ const analyzeStock = async () => {
   }
   loading.value = true;
   try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/analysis/${ticker.value}?rr_ratio=${rrRatio.value}&atr_sl_multiplier=${atrSlMultiplier.value}`)
+    const res = await fetch(`${api_root_url}/api/analysis/${ticker.value}?rr_ratio=${rrRatio.value}&atr_sl_multiplier=${atrSlMultiplier.value}`)
     const data = await res.json();
 
     if (!res.ok) {
