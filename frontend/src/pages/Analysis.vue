@@ -92,9 +92,9 @@
 import { ref } from 'vue';
 import { useToast } from 'vue-toastification';
 import Prediction from '../components/Prediction.vue';
-import PriceTargets from '../components/PriceTargets.vue'
+import PriceTargets from '../components/PriceTargets.vue';
 import Sentiment from '../components/Sentiment.vue';
-import News from '../components/News.vue'
+import News from '../components/News.vue';
 
 const api_root_url = import.meta.env.VITE_ENVIRONMENT === "PROD" ? "" : "http://localhost:8000";
 
