@@ -96,7 +96,8 @@ import PriceTargets from '../components/PriceTargets.vue'
 import Sentiment from '../components/Sentiment.vue';
 import News from '../components/News.vue'
 
-const api_root_url = import.meta.env.VITE_ENVIRONMENT === "PROD" ? "https://52.14.86.214" : "http://localhost:8000";
+const api_root_url = import.meta.env.VITE_ENVIRONMENT === "PROD" ? "" : "http://localhost:8000";
+
 const toast = useToast();
 
 const ticker = ref('');
