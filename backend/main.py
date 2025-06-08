@@ -20,9 +20,14 @@ async def lifespan(app):
 app = FastAPI(lifespan=lifespan)
 
 
+if os.getenv("ENVIRONMENT") == "prod":
+    allowed_origins = ["http://52.14.86.214"]
+else:
+    allowed_origins = ["*"]
+    
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # or ["*"] for all origins 
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
