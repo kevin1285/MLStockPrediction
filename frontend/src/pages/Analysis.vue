@@ -71,7 +71,11 @@
 
       <div v-if="analysisData" class="analysis-results">
         <div class="result-card">
-          <Prediction :tradeSignal="analysisData.tradeSignal" :papPattern="analysisData.papPattern"/>
+          <Prediction 
+            :tradeSignal="analysisData.tradeSignal" 
+            :papPattern="analysisData.papPattern"
+            :candlestickData="analysisData.candlestickData"
+          />
         </div>
 
         <div class="result-card">
@@ -141,7 +145,8 @@ const analyzeStock = async () => {
       takeProfit: data.take_profit,
       stopLoss: data.stop_loss,
       articles: data.articles,
-      papPattern: data.pap_pattern
+      papPattern: data.pap_pattern,
+      candlestickData: data.candlestick_data
     };
   } catch (error) {
     if (error instanceof TypeError && error.message.includes("Failed to fetch")) {

@@ -192,7 +192,7 @@ def get_pap_signal(
     lookback_bars: int = 30,
 ):
     # Fixed time for testing: 1:00 PM EST (6:00 PM UTC)
-    now_dt = datetime(2025, 6, 4, 18, 0, 0, tzinfo=timezone.utc)
+    now_dt = datetime(2025, 7, 8, 18, 0, 0, tzinfo=timezone.utc)
     #now_dt = datetime.now(timezone.utc);
 
     extra = ATR_PERIOD + 10   
@@ -208,11 +208,10 @@ def get_pap_signal(
     # Compute PAP_Score for that window
     pap_signal, pap_pattern = precompute_pap_score(df, interval_minutes, lookback_bars)
 
-    if pap_signal == 0:
-        return 0, "N/A", df
+    # Always return the actual pattern (including "Noise"), not "N/A"
     return pap_signal, pap_pattern, df
 
-interval_settings = [(1, 10), (1, 15), (1, 30), (1, 45), (2, 10), (2, 15), (2, 30), (2, 45), (5, 10), (5, 15)]
+interval_settings = [(1, 30), (1, 15), (1, 30), (1, 45), (2, 10), (2, 15), (2, 30), (2, 45), (5, 10), (5, 15)]
 def get_trade_signal(
     ticker: str,
     atr_sl_multiplier: float = 1.5,  
@@ -221,7 +220,11 @@ def get_trade_signal(
     if not ticker_exists(ticker):
         raise AppException("Invalid ticker symbol. Please try again", 404)
 
-
+    # Store the dataframe that was actually analyzed
+    analyzed_df = None
+    pap_signal = 0
+    pap_pattern = "Noise"
+    
     for interval_minutes, lookback_bars in interval_settings:
         print(f"-------{interval_minutes}m, {lookback_bars} bars-----")
         pap_signal, pap_pattern, df = get_pap_signal(
@@ -229,8 +232,9 @@ def get_trade_signal(
             interval_minutes=interval_minutes,
             lookback_bars=lookback_bars
         )
+        analyzed_df = df.copy()  # Always capture the dataframe for chart display
         if pap_signal != 0:
-            break
+            break  # Found a valid pattern, break early
 
     sent_score, articles = get_news_data_today(ticker)
 
@@ -242,7 +246,21 @@ def get_trade_signal(
         signal = "short"
     else:
         if sent_score == 0:
-            return "no action", "N/A", "N/A", sent_score, articles, pap_pattern
+            # For "no action" cases, still return the pattern and candlestick data
+            # Prepare candlestick data for frontend
+            candlestick_data = None
+            if analyzed_df is not None:
+                candlestick_data = []
+                for timestamp, row in analyzed_df.iterrows():
+                    candlestick_data.append({
+                        "timestamp": timestamp.isoformat(),
+                        "open": float(row["Open"]),
+                        "high": float(row["High"]),
+                        "low": float(row["Low"]),
+                        "close": float(row["Close"]),
+                        "volume": float(row["Volume"])
+                    })
+            return "no action", "N/A", "N/A", sent_score, articles, pap_pattern, candlestick_data
         signal = "long" if sent_score > 0 else "short"
     
     atr = df["ATR_14"].iloc[-1]
@@ -261,4 +279,19 @@ def get_trade_signal(
         sl = resistance + atr_sl_multiplier * atr
         risk = sl - price
         tp = price - rr_ratio * risk
-    return signal, sl, tp, sent_score, articles, pap_pattern
+    
+    # Prepare candlestick data for frontend
+    candlestick_data = None
+    if analyzed_df is not None:
+        candlestick_data = []
+        for timestamp, row in analyzed_df.iterrows():
+            candlestick_data.append({
+                "timestamp": timestamp.isoformat(),
+                "open": float(row["Open"]),
+                "high": float(row["High"]),
+                "low": float(row["Low"]),
+                "close": float(row["Close"]),
+                "volume": float(row["Volume"])
+            })
+    
+    return signal, sl, tp, sent_score, articles, pap_pattern, candlestick_data
