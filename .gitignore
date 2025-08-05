@@ -8,4 +8,8 @@
 /backend/.aws-sam/
 *.py[co]                 
 __pycache__/             
-**/__pycache__/   
+**/__pycache__/
+
+# macOS system files
+.DS_Store
+**/.DS_Store
