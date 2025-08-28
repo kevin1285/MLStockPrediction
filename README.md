@@ -1,3 +1,6 @@
+## Paper
+https://drive.google.com/file/d/1vkaN5OSkbHYFSAoEOnHSHWCNGiCw1eEo/view?usp=sharing 
+
 ## Tech Stack
 
 ### Frontend
